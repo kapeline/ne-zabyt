@@ -1014,6 +1014,12 @@ function parseSpeech(src) {
     if (m[2] !== 'в' && repeat === 'none') repeat = 'weekly';
   }
   if (cut(/послезавтра/)) day = 2; else if (cut(/завтра/)) day = 1; else if (cut(/сегодня/)) day = 0;
+  var MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  if (day === null && (m = cut(/(^|\s)(?:(?:на|до|к|в)\s+)?(\d{1,2})\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)(?=\s|$|[,.])/)) && +m[2] >= 1 && +m[2] <= 31) {
+    var nowD = new Date(), t0 = new Date(nowD.getFullYear(), nowD.getMonth(), nowD.getDate()), tg = new Date(nowD.getFullYear(), MONTHS.indexOf(m[3]), +m[2]);
+    if (tg < t0) tg = new Date(nowD.getFullYear() + 1, MONTHS.indexOf(m[3]), +m[2]);
+    day = Math.round((tg - t0) / 86400000);
+  }
   if (wdIdx !== null && day === null) day = (wdIdx - new Date().getDay() + 7) % 7;
   function part(h0, p) {
     if (!p) return h0;
@@ -1021,10 +1027,11 @@ function parseSpeech(src) {
     if (p === 'ночи' && h0 === 12) return 0;
     return h0;
   }
-  if ((m = cut(/(^|\s)в\s+(\d{1,2})[:.](\d{2})(?=\s|$|[,.])/))) { h = +m[2]; mi = +m[3]; }
+  if (cut(/(^|\s)(?:в|на)\s+полдень(?=\s|$|[,.])/)) { h = 12; mi = 0; }
+  else if ((m = cut(/(^|\s)(?:в|на|к|до)\s+(\d{1,2})[:.](\d{2})(?=\s|$|[,.])/))) { h = +m[2]; mi = +m[3]; }
   else if ((m = cut(/(^|\s)(\d{1,2}):(\d{2})(?=\s|$|[,.])/))) { h = +m[2]; mi = +m[3]; }
-  else if ((m = cut(/(^|\s)в\s+(\d{1,2})\s+час(?:а|ов)?(?:\s+(утра|дня|вечера|ночи))?(?=\s|$|[,.])/))) { h = part(+m[2], m[3]); }
-  else if ((m = cut(/(^|\s)в\s+(\d{1,2})\s+(утра|дня|вечера|ночи)(?=\s|$|[,.])/))) { h = part(+m[2], m[3]); }
+  else if ((m = cut(/(^|\s)(?:в|на|к|до)\s+(\d{1,2})\s+час(?:а|ов)?(?:\s+(утра|дня|вечера|ночи))?(?=\s|$|[,.])/))) { h = part(+m[2], m[3]); }
+  else if ((m = cut(/(^|\s)(?:в|на|к|до)\s+(\d{1,2})\s+(утра|дня|вечера|ночи)(?=\s|$|[,.])/))) { h = part(+m[2], m[3]); }
   if (h === null) {
     if (cut(/(^|\s)утром(?=\s|$|[,.])/)) h = 9; else if (cut(/(^|\s)вечером(?=\s|$|[,.])/)) h = 19; else if (cut(/(^|\s)(днем|днём)(?=\s|$|[,.])/)) h = 14;
   }
