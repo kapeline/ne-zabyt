@@ -954,6 +954,7 @@ document.addEventListener('change', function (e) {
 $('#qa').addEventListener('submit', function (e) {
   e.preventDefault(); var t = $('#qa-text').value.trim(); if (!t) return;
   var wh = $('#qa-when').value, rp = $('#qa-rep').value, defaulted = false;
+  if (!wh && rp === 'none') { var ps = parseSpeech(t); if (ps.when || ps.repeat !== 'none') { t = ps.text || t; wh = ps.when; rp = ps.repeat; } }
   if (rp !== 'none' && !wh) { wh = today() + 'T10:00'; defaulted = true; }
   S.tasks.push({ id: uid(), text: t, when: wh, repeat: rp, done: false, doneDay: '' });
   e.target.reset(); setHint(''); S.tab = 'tasks'; save(); renderAll(); check();
@@ -1049,12 +1050,17 @@ function finalizeSpeech(raw) {
   $('#qa-rep').value = p.repeat;
   setHint('Поняла: ' + (p.when ? fmtDT(p.when) : 'без времени') + (p.repeat !== 'none' ? ' · ' + REPEAT[p.repeat] : '') + '. Проверь и нажми «Закинуть».');
 }
+var FALLBACK_TIP = 'Запасной путь: нажми Fn два раза (диктовка macOS) и говори прямо в строку. Время и повтор я пойму сама.';
+var useLocal = false, toLocal = false;
+try { useLocal = localStorage.getItem('ne-zabyt-asr-local') === '1'; } catch (e) {}
+function rememberLocal() { useLocal = true; try { localStorage.setItem('ne-zabyt-asr-local', '1'); } catch (e) {} }
+function resetFields() { $('#qa-text').value = ''; $('#qa-when').value = ''; $('#qa-rep').value = 'none'; }
 function toggleListen() {
   if (!SR) return;
   if (listening && rec) { rec.stop(); return; }
   rec = new SR(); rec.lang = 'ru-RU'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
   var base = '', finalText = '', failed = false;
-  rec.onstart = function () { listening = true; micBtn.setAttribute('aria-pressed', 'true'); $('#qa-text').value = ''; $('#qa-when').value = ''; $('#qa-rep').value = 'none'; setHint('Слушаю. Говори, например: «завтра в 15:00 позвонить маме».'); };
+  rec.onstart = function () { listening = true; micBtn.setAttribute('aria-pressed', 'true'); resetFields(); setHint('Слушаю. Говори, например: «завтра в 15:00 позвонить маме».'); };
   rec.onresult = function (e) {
     var interim = '';
     for (var i = e.resultIndex; i < e.results.length; i++) {
@@ -1064,25 +1070,176 @@ function toggleListen() {
     $('#qa-text').value = (base + ' ' + finalText + interim).trim();
   };
   rec.onerror = function (e) {
+    if (e.error === 'aborted') return;
     failed = true;
     var msgs = {
       'not-allowed': 'Нет доступа к микрофону. Нажми на значок замка в адресной строке и разреши микрофон.',
-      'service-not-allowed': 'Нет доступа к микрофону. Нажми на значок замка в адресной строке и разреши микрофон.',
       'no-speech': 'Не услышала. Нажми на микрофон и попробуй ещё раз.',
-      'audio-capture': 'Не нашла микрофон. Проверь, что он подключён.',
-      'network': 'Распознаванию речи нужен интернет.'
+      'audio-capture': 'Не нашла микрофон. Проверь, что он подключён.'
     };
-    setHint(msgs[e.error] || 'Не получилось распознать речь (' + e.error + ').');
+    if (msgs[e.error]) { setHint(msgs[e.error]); return; }
+    /* network, service-not-allowed и всё неизвестное: распознавание браузера не работает, переходим на запись и локальную модель */
+    toLocal = true;
+    setHint('Распознавание браузера недоступно. Включаю запись.');
   };
   rec.onend = function () {
     listening = false; micBtn.setAttribute('aria-pressed', 'false');
+    if (toLocal) { toLocal = false; rememberLocal(); resetFields(); startLocal(); return; }
     var txt = (base + ' ' + finalText).trim() || $('#qa-text').value.trim();
     if (txt && !failed) finalizeSpeech(txt);
     else if (!failed) setHint('Не услышала. Нажми на микрофон и попробуй ещё раз.');
   };
   try { rec.start(); } catch (err) { setHint('Микрофон сейчас занят. Попробуй ещё раз.'); }
 }
-if (SR) micBtn.addEventListener('click', toggleListen); else micBtn.hidden = true;
+
+/* ---------- запасной путь: запись и распознавание прямо в браузере (Whisper, Transformers.js) ---------- */
+var ASR_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
+var ASR_MODELS = [['onnx-community/whisper-base', 'q8'], ['Xenova/whisper-base', 'q8']];
+var lstate = 'idle', lstream = null, lmr = null, lchunks = [], ltimer = 0, asrW = null;
+
+/* Этот код уходит в Web Worker через Blob-URL, поэтому он самодостаточный. */
+function asrWorker() {
+  var asr = null, files = {};
+  function post(o) { self.postMessage(o); }
+  function onProgress(p) {
+    if (!p || p.status !== 'progress' || !p.total || !/\.onnx$/.test(p.file || '')) return;
+    files[p.file] = [p.loaded, p.total];
+    var l = 0, t = 0; for (var k in files) { l += files[k][0]; t += files[k][1]; }
+    post({ type: 'progress', loaded: l, total: t });
+  }
+  async function load(m) {
+    var T = await import(m.url), lastErr;
+    T.env.allowLocalModels = false;
+    for (var i = 0; i < m.models.length; i++) {
+      try {
+        files = {};
+        return await T.pipeline('automatic-speech-recognition', m.models[i][0], { dtype: m.models[i][1], device: 'wasm', progress_callback: onProgress });
+      } catch (err) { lastErr = err; }
+    }
+    throw lastErr;
+  }
+  self.onmessage = async function (e) {
+    var m = e.data, stage = 'load';
+    try {
+      if (!asr) { post({ type: 'status', s: 'load' }); asr = await load(m); }
+      stage = 'run'; post({ type: 'status', s: 'run' });
+      var out = await asr(m.audio, { language: 'russian', task: 'transcribe', chunk_length_s: 30 });
+      post({ type: 'result', text: String((out && out.text) || '').trim() });
+    } catch (err) {
+      post({ type: 'error', stage: stage, msg: String((err && err.message) || err) });
+    }
+  };
+}
+function getAsrWorker() {
+  if (asrW) return asrW;
+  var url = URL.createObjectURL(new Blob(['(' + asrWorker.toString() + ')()'], { type: 'text/javascript' }));
+  asrW = new Worker(url);
+  return asrW;
+}
+function recognize(audio) {
+  return new Promise(function (resolve, reject) {
+    var w;
+    try { w = getAsrWorker(); } catch (err) { reject({ stage: 'load', msg: String(err) }); return; }
+    w.onmessage = function (e) {
+      var m = e.data;
+      if (m.type === 'result') resolve(m.text);
+      else if (m.type === 'error') reject(m);
+      else if (m.type === 'status') setHint(m.s === 'run' ? 'Распознаю…' : 'Загружаю голосовую модель…');
+      else if (m.type === 'progress') {
+        if (m.loaded >= m.total) setHint('Готовлю модель…');
+        else setHint('Скачиваю голосовую модель (' + Math.round(m.total / 1048576) + ' МБ), это один раз: ' + Math.floor(100 * m.loaded / m.total) + '%');
+      }
+    };
+    w.onerror = function (e) { asrW = null; reject({ stage: 'load', msg: String((e && e.message) || 'worker') }); };
+    w.postMessage({ url: ASR_URL, models: ASR_MODELS, audio: audio }, [audio.buffer]);
+  });
+}
+/* Запись -> моно Float32 на 16 кГц */
+async function decodeAudio(blob) {
+  var Ctx = window.AudioContext || window.webkitAudioContext, ctx;
+  try { ctx = new Ctx({ sampleRate: 16000 }); } catch (e) { ctx = new Ctx(); }
+  try {
+    var ab = await blob.arrayBuffer();
+    var buf = await new Promise(function (ok, no) { var r = ctx.decodeAudioData(ab, ok, no); if (r && r.then) r.then(ok, no); });
+    var n = buf.length, ch = buf.numberOfChannels, mono = new Float32Array(n), c, i;
+    for (c = 0; c < ch; c++) { var d = buf.getChannelData(c); for (i = 0; i < n; i++) mono[i] += d[i] / ch; }
+    if (buf.sampleRate !== 16000) {
+      var k = buf.sampleRate / 16000, len = Math.floor(n / k), out = new Float32Array(len);
+      for (i = 0; i < len; i++) { var x = i * k, j = Math.floor(x), f = x - j; out[i] = mono[j] * (1 - f) + (mono[Math.min(j + 1, n - 1)] * f); }
+      mono = out;
+    }
+    return mono;
+  } finally { try { ctx.close(); } catch (e) {} }
+}
+function micError(err) {
+  var n = err && err.name;
+  if (n === 'NotAllowedError' || n === 'SecurityError') return 'Нет доступа к микрофону. Нажми на значок замка в адресной строке и разреши микрофон.';
+  if (n === 'NotFoundError' || n === 'OverconstrainedError') return 'Не нашла микрофон. Проверь, что он подключён.';
+  return 'Не удалось включить микрофон. ' + FALLBACK_TIP;
+}
+async function startLocal() {
+  if (lstate !== 'idle') return;
+  if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder && (window.AudioContext || window.webkitAudioContext) && window.Worker)) {
+    setHint('В этом браузере нельзя записать голос для распознавания. ' + FALLBACK_TIP); try { $('#qa-text').focus(); } catch (x) {}
+    return;
+  }
+  lstate = 'start'; setHint('Включаю микрофон…');
+  try { lstream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch (err) { lstate = 'idle'; setHint(micError(err)); return; }
+  try {
+    var mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].filter(function (t) { return MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t); })[0];
+    lmr = mime ? new MediaRecorder(lstream, { mimeType: mime }) : new MediaRecorder(lstream);
+    lchunks = [];
+    lmr.ondataavailable = function (e) { if (e.data && e.data.size) lchunks.push(e.data); };
+    lmr.onstop = onLocalStop;
+    resetFields();
+    lmr.start();
+  } catch (err) {
+    lstream.getTracks().forEach(function (t) { t.stop(); }); lstate = 'idle'; setHint('Не удалось начать запись. ' + FALLBACK_TIP); return;
+  }
+  lstate = 'rec'; micBtn.setAttribute('aria-pressed', 'true');
+  setHint('Записываю… нажми ещё раз, когда закончишь');
+  ltimer = setTimeout(stopLocal, 30000);
+}
+function stopLocal() {
+  clearTimeout(ltimer);
+  if (lstate !== 'rec') return;
+  micBtn.setAttribute('aria-pressed', 'false');
+  try { if (lmr && lmr.state !== 'inactive') lmr.stop(); else onLocalStop(); } catch (e) { onLocalStop(); }
+}
+async function onLocalStop() {
+  if (lstate !== 'rec') return;
+  lstate = 'busy';
+  if (lstream) lstream.getTracks().forEach(function (t) { t.stop(); });
+  setHint('Распознаю…');
+  try {
+    var audio = await decodeAudio(new Blob(lchunks, { type: (lmr && lmr.mimeType) || 'audio/webm' }));
+    var peak = 0; for (var i = 0; i < audio.length; i++) { var a = Math.abs(audio[i]); if (a > peak) peak = a; }
+    if (audio.length < 8000 || peak < 0.01) { setHint('Не услышала. Нажми на микрофон и попробуй ещё раз.'); }
+    else {
+      var text = await recognize(audio);
+      if (text) finalizeSpeech(text); else setHint('Не услышала. Нажми на микрофон и попробуй ещё раз.');
+    }
+  } catch (err) {
+    if (err && err.stage === 'load') setHint('Не получилось скачать голосовую модель: нет сети или заблокирован huggingface.co. ' + FALLBACK_TIP);
+    else setHint('Не получилось распознать запись. ' + FALLBACK_TIP);
+    try { $('#qa-text').focus(); } catch (x) {}
+  }
+  lstate = 'idle';
+}
+function onMic() {
+  if (lstate === 'rec') { stopLocal(); return; }
+  if (lstate !== 'idle') return;
+  if (SR && !useLocal) toggleListen(); else startLocal();
+}
+micBtn.addEventListener('click', onMic);
+/* текст, набранный руками или надиктованный системной диктовкой, тоже разбираем */
+$('#qa-text').addEventListener('blur', function () {
+  var t = this.value.trim();
+  if (!t || $('#qa-when').value || $('#qa-rep').value !== 'none' || listening || lstate !== 'idle') return;
+  var p = parseSpeech(t);
+  if (p.when || p.repeat !== 'none') finalizeSpeech(t);
+});
 
 /* ---------- запуск ---------- */
 renderSettings();
