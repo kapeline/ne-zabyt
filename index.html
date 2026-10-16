@@ -207,7 +207,7 @@ body[data-mode="focus"] #posts, body[data-mode="focus"] #lists, body[data-mode="
 .b-s { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
 .b-a { display: flex; gap: 6px; flex-wrap: wrap; }
 .b-a .mini { flex: 1 1 auto; }
-.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: flex; justify-content: center;
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 55; display: flex; justify-content: center;
   padding: 12px max(16px, env(safe-area-inset-left, 0px)) calc(116px + env(safe-area-inset-bottom, 0px)); pointer-events: none; }
 .sheet > div { pointer-events: auto; width: 100%; max-width: 520px; background: var(--ink); color: var(--bg); border-radius: 16px; padding: 12px 16px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; box-shadow: 0 8px 30px rgba(0, 0, 0, .25); }
 .sheet .btn { background: var(--bg); color: var(--ink); min-height: 40px; padding: 6px 14px; }
@@ -217,6 +217,38 @@ body[data-mode="focus"] #posts, body[data-mode="focus"] #lists, body[data-mode="
 canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 @media (max-width: 420px) { h1 { font-size: 21px; } .now-title { font-size: 22px; } #buddy { width: 80px; height: 80px; } }
+
+.top-r { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.starbtn { min-height: 40px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); font-weight: 800; color: var(--ink); }
+.starbtn .sb-star { color: #F2A900; }
+.starbtn .sb-lv { color: var(--muted); font-weight: 600; font-size: 13px; }
+.rate { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+button.chip.pts { border: 1px solid var(--line); cursor: pointer; background: var(--surface-solid); }
+.gain { position: fixed; right: 22px; bottom: 150px; z-index: 70; font-family: var(--f-display); font-weight: 800; font-size: 22px; color: #8A5A00; background: #FFF1BF; border: 1px solid #F2D067; border-radius: 999px; padding: 6px 16px; pointer-events: none; animation: gainUp 1.6s ease-out forwards; }
+@keyframes gainUp { 0% { opacity: 0; transform: translateY(10px) scale(.8); } 15% { opacity: 1; transform: translateY(0) scale(1.08); } 100% { opacity: 0; transform: translateY(-64px); } }
+#game { position: fixed; inset: 0; z-index: 45; background: rgba(20, 22, 56, .5); display: flex; align-items: flex-end; justify-content: center; }
+.g-card { width: 100%; max-width: 720px; max-height: 92vh; overflow: auto; background: var(--surface-solid); border-radius: 24px 24px 0 0; padding: 16px max(16px, env(safe-area-inset-left, 0px)) 24px; display: grid; gap: 12px; align-content: start; }
+@media (min-width: 760px) { #game { align-items: center; } .g-card { border-radius: 24px; max-height: 88vh; } }
+.g-top { display: grid; grid-template-columns: 96px 1fr auto; gap: 12px; align-items: center; }
+#g-lu { width: 96px; height: 96px; }
+.g-lv { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); font-weight: 800; }
+.g-name { font-family: var(--f-display); font-weight: 700; font-size: 20px; line-height: 1.2; }
+.g-bal { font-weight: 800; margin-top: 4px; }
+.ach-grid { display: grid; gap: 8px; }
+.ach { display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-solid); }
+.ach:not(.got) { opacity: .66; }
+.ach.bronze.got { border-color: #D9A06B; } .ach.silver.got { border-color: #AEB8C8; }
+.ach.gold.got { border-color: #F0C24B; background: color-mix(in srgb, #F0C24B 16%, var(--surface-solid)); }
+.ach.epic.got { border-color: #B07BFF; background: color-mix(in srgb, #B07BFF 14%, var(--surface-solid)); }
+.ach .ai { font-size: 26px; text-align: center; }
+.ach .am { display: grid; gap: 2px; min-width: 0; }
+.ach .am b { overflow-wrap: anywhere; }
+.ap { font-weight: 800; color: #B07A00; white-space: nowrap; font-size: 14px; }
+.shop { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 8px 0 14px; }
+.card-s { border: 1px solid var(--line); border-radius: 16px; padding: 10px; display: grid; gap: 6px; justify-items: center; text-align: center; background: var(--surface-solid); align-content: start; }
+.card-s svg { width: 84px; height: 84px; overflow: visible; }
+.still, .still * { animation: none !important; }
+.rules p { margin: 6px 0 10px; }
 </style>
 </head>
 <body>
@@ -226,9 +258,12 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
       <p class="date" id="date"></p>
       <h1 id="greet">Привет</h1>
     </div>
+    <div class="top-r">
+    <button type="button" id="starBtn" class="starbtn" data-act="game" aria-label="Звёздочки, уровень, ачивки и лавка Лу"><span class="sb-star" aria-hidden="true">★</span> <b id="st-n">0</b> <span class="sb-lv" id="st-lv"></span></button>
     <div class="seg" role="group" aria-label="Режим">
       <button type="button" data-act="mode" data-id="focus" aria-pressed="false">Один шаг</button>
       <button type="button" data-act="mode" data-id="all" aria-pressed="true">Всё сразу</button>
+    </div>
     </div>
   </header>
 
@@ -246,6 +281,9 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
     <p id="qa-hint" role="status" hidden></p>
     <div class="row2">
       <label>Напомнить в<input id="qa-when" type="datetime-local"></label>
+      <label>Сложность<select id="qa-df"><option value="1">Лёгкая</option><option value="2" selected>Средняя</option><option value="3">Сложная</option></select></label>
+      <label>Сколько займёт<select id="qa-tm"><option value="1" selected>До 15 минут</option><option value="2">До часа</option><option value="3">Час и больше</option></select></label>
+      <p class="note" id="qa-pts" style="grid-column: 1 / -1; margin: 0"></p>
       <label>Повтор
         <select id="qa-rep"><option value="none">Не повторять</option><option value="daily">Каждый день</option><option value="weekdays">По будням</option><option value="weekly">Каждую неделю</option><option value="biweekly">Раз в 2 недели</option><option value="monthly">Каждый месяц</option><option value="yearly">Каждый год</option></select>
       </label>
@@ -330,7 +368,7 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
       </div>
     </details>
     <details>
-      <summary>Мои награды за выложенный день</summary>
+      <summary>Личные призы за выложенный день (по желанию)</summary>
       <label for="rewards" class="note">Одна награда на строку. Одна из них выпадет, когда отметишь все 6 выкладок.</label>
       <textarea id="rewards"></textarea>
     </details>
@@ -382,6 +420,17 @@ canvas#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events
 
 <div class="sheet" id="toast" hidden><div><span id="toast-t"></span><button type="button" class="btn" id="toast-b">Отменить</button></div></div>
 <div class="sheet" id="win" hidden><div><span class="t">Все 6 выложены</span><span id="win-r"></span><button type="button" class="btn" data-act="win-close">Забрать награду</button></div></div>
+<div id="game" hidden role="dialog" aria-modal="true" aria-label="Звёздочки, ачивки и лавка Лу">
+  <div class="g-card">
+    <div class="g-top">
+      <svg class="lu" id="g-lu" viewBox="0 0 140 140" aria-hidden="true"></svg>
+      <div id="g-info"></div>
+      <button type="button" class="x" id="g-close" data-act="game-close" aria-label="Закрыть">×</button>
+    </div>
+    <div class="tabs" role="tablist" id="g-tabs"></div>
+    <div id="g-body"></div>
+  </div>
+</div>
 <canvas id="fx" hidden></canvas>
 
 <script>
@@ -425,7 +474,7 @@ function shiftTime(tm, min) { var p = tm.split(':'), t = (+p[0]) * 60 + (+p[1]) 
 var DEFAULT_REWARDS = ['Чай или кофе и что-нибудь вкусное к нему', '15 минут сериала без чувства вины', 'Прогулка с любимым плейлистом', '10 минут ничегонеделания', 'Написать подруге и просто поболтать'];
 function blank() {
   return { v: 2, ts: 0, mode: 'all', tab: 'tasks', posts: {}, closed: {}, tasks: [], doctors: [], people: [], writes: [], deadlines: [],
-    rewards: DEFAULT_REWARDS.slice(), snooze: {}, fired: {}, later: {}, nag: {}, set: { am: '10:00', pm: '19:00', again: true, sound: true } };
+    rewards: DEFAULT_REWARDS.slice(), stars: 0, xp: 0, ach: {}, own: { ch: ['lu'], it: [] }, eq: { ch: 'lu', it: [] }, paid: {}, recent: [], cnt: {}, taps: 0, voice: 0, snooze: {}, fired: {}, later: {}, nag: {}, set: { am: '10:00', pm: '19:00', again: true, sound: true } };
 }
 function seed() {
   var b = blank();
@@ -443,7 +492,19 @@ try { var raw = localStorage.getItem(LS); S = raw ? migrate(JSON.parse(raw)) : s
 function save() { S.ts = Date.now(); try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) {} }
 
 function postCount(day) { var p = S.posts[day] || {}; return Object.keys(p).filter(function (k) { return p[k]; }).length; }
-function bump() { var t = today(); S.closed[t] = (S.closed[t] || 0) + 1; cheer(); }
+function bump(key, pts, meta) {
+  var t = today(), now = Date.now(), c = meta || {};
+  S.closed[t] = (S.closed[t] || 0) + 1; cheer();
+  var fresh = !key || !S.paid[key];
+  if (key) S.paid[key] = 1;
+  if (fresh) {
+    S.recent = (S.recent || []).filter(function (x) { return now - x < 3600000; }); S.recent.push(now);
+    var k = c.kind || 'misc'; S.cnt[k] = (S.cnt[k] || 0) + 1;
+    gain(pts || 0);
+  }
+  c.bump = fresh; c.pts = pts || 0;
+  checkAch(c);
+}
 function find(list, id) { for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; return null; }
 function isDone(t) { return t.repeat && t.repeat !== 'none' ? t.doneDay === today() : !!t.done; }
 /* Выпадает ли задача на этот день. Точка отсчёта повтора: дата в поле «Напомнить в». */
@@ -468,12 +529,12 @@ function nextOccurrence(x) {
   }
   return '';
 }
-function markTask(t, v) { if (t.repeat && t.repeat !== 'none') t.doneDay = v ? today() : ''; else t.done = !!v; if (v) bump(); }
+function markTask(t, v) { var rp = t.repeat && t.repeat !== 'none'; if (rp) t.doneDay = v ? today() : ''; else t.done = !!v; if (v) bump(rp ? 'task:' + t.id + ':' + today() : 'task:' + t.id, taskPts(t), { kind: 'task' }); }
 
 function setPost(key, val, quiet, day) {
   var t = day || today(), p = S.posts[t] = S.posts[t] || {}, was = postCount(t);
   if (val) p[key] = val; else delete p[key];
-  if (val === 1) bump();
+  if (val === 1) bump('post:' + t + ':' + key, 1, { kind: 'post' });
   if (quiet) return;
   save(); renderAll();
   if (was < 6 && postCount(t) === 6) celebrate();
@@ -531,13 +592,13 @@ function doNow(it) {
   var t = today(), d;
   switch (it.kind) {
     case 'post': setPost(it.ref, 1); return;
-    case 'dl': d = find(S.deadlines, it.ref); if (d) { d.done = true; bump(); } break;
+    case 'dl': d = find(S.deadlines, it.ref); if (d) { d.done = true; awardDl(d); } break;
     case 'task': d = find(S.tasks, it.ref); if (d) markTask(d, true); break;
-    case 'doc': d = find(S.doctors, it.ref); if (d) { d.status = 'booked'; bump(); } break;
-    case 'docv': d = find(S.doctors, it.ref); if (d) { d.done = true; bump(); } break;
+    case 'doc': d = find(S.doctors, it.ref); if (d) { d.status = 'booked'; awardDoc(d, false); } break;
+    case 'docv': d = find(S.doctors, it.ref); if (d) { d.done = true; awardDoc(d, true); } break;
     case 'docs': S.snooze[it.id] = t; break;
-    case 'wr': d = find(S.writes, it.ref); if (d) { d.done = true; bump(); } break;
-    case 'pp': d = find(S.people, it.ref); if (d) { d.last = t; bump(); } break;
+    case 'wr': d = find(S.writes, it.ref); if (d) { d.done = true; awardWr(d); } break;
+    case 'pp': d = find(S.people, it.ref); if (d) { d.last = t; awardPp(d); } break;
   }
   save(); renderAll();
 }
@@ -611,6 +672,7 @@ function renderLists() {
   var trow = function (x, done) {
     var rep = x.repeat && x.repeat !== 'none', meta = '', ch = '';
     var canDone = true;
+    var rate = (!done && !x.ex) ? '<span class="rate"><button type="button" class="chip pts" data-act="task-df" data-id="' + x.id + '" title="Сложность. Нажми, чтобы сменить">' + DF[x.df || 2] + '</button><button type="button" class="chip pts" data-act="task-tm" data-id="' + x.id + '" title="Сколько займёт. Нажми, чтобы сменить">' + TM[x.tm || 1] + '</button><span class="chip ok">+' + taskPts(x) + ' ★</span></span>' : '';
     if (!x.when) meta = 'без времени';
     else if (rep) {
       meta = REPEAT[x.repeat] + ' · ' + hhmm(x.when);
@@ -618,7 +680,7 @@ function renderLists() {
       else if (!occursOn(x, today())) { canDone = false; var n2 = nextOccurrence(x); ch = chip('', 'дальше: ' + (n2 ? fmtDay(n2) : '—')); }
     } else meta = fmtDT(x.when);
     if (!done && !rep && x.when && new Date(x.when).getTime() < Date.now()) ch = chip('alert', 'пора была');
-    return '<li class="row"><div class="main"><strong>' + esc(x.text) + '</strong><span class="meta">' + esc(meta) + '</span></div><div class="side">' + ch + (canDone ? '<button type="button" class="mini' + (done ? '' : ' pri') + '" data-act="' + (done ? 'task-undo' : 'task-done') + '" data-id="' + x.id + '">' + (done ? 'Вернуть' : 'Сделано') + '</button>' : '') + '<button type="button" class="x" data-act="task-del" data-id="' + x.id + '" aria-label="Удалить">×</button></div></li>';
+    return '<li class="row"><div class="main"><strong>' + esc(x.text) + '</strong><span class="meta">' + esc(meta) + '</span>' + rate + '</div><div class="side">' + ch + (canDone ? '<button type="button" class="mini' + (done ? '' : ' pri') + '" data-act="' + (done ? 'task-undo' : 'task-done') + '" data-id="' + x.id + '">' + (done ? 'Вернуть' : 'Сделано') + '</button>' : '') + '<button type="button" class="x" data-act="task-del" data-id="' + x.id + '" aria-label="Удалить">×</button></div></li>';
   };
   var tOpen = S.tasks.filter(function (x) { return !isDone(x); }).sort(function (a, c) { return (a.when || '9').localeCompare(c.when || '9'); });
   var tDone = S.tasks.filter(isDone);
@@ -684,7 +746,7 @@ function renderSettings() {
   $('#set-again').checked = !!S.set.again; $('#set-sound').checked = !!S.set.sound;
   $('#rewards').value = S.rewards.join('\n');
 }
-function renderAll() { renderHead(); renderWeek(); renderNow(); renderPosts(); renderLists(); renderPerm(); }
+function renderAll() { renderHead(); renderWeek(); renderNow(); renderPosts(); renderLists(); renderPerm(); renderGameBits(); }
 
 /* ---------- таймер ---------- */
 var T = { end: 0, total: 0, iv: 0, over: false };
@@ -752,12 +814,12 @@ function next() {
   P.cur = ev;
   var h = '<p class="b-k">' + esc(ev.kicker || 'Лу напоминает') + '</p><p class="b-t">' + esc(ev.title) + '</p>' + (ev.body ? '<p class="b-s">' + esc(ev.body) + '</p>' : '') + '<div class="b-a">';
   h += '<button type="button" class="mini pri" data-pa="done">' + esc(ev.label || 'Понятно') + '</button>';
-  if (ev.key !== 'buddy') h += '<button type="button" class="mini" data-pa="later">Через 10 минут</button>';
+  if (ev.key !== 'buddy' && !ev.quiet) h += '<button type="button" class="mini" data-pa="later">Через 10 минут</button>';
   if (ev.open) h += '<button type="button" class="mini" data-pa="open">Открыть</button>';
   if (ev.key === 'buddy') h += '<button type="button" class="mini" data-pa="close">Ок</button>';
   bubble.innerHTML = h + '</div>';
   bubble.hidden = false; buddy.classList.add('talking');
-  startAttention(ev);
+  if (!ev.quiet) startAttention(ev);
 }
 function popupAction(a) {
   var ev = P.cur; if (!ev) return;
@@ -808,14 +870,14 @@ function events(off) {
   /* дедлайны */
   S.deadlines.forEach(function (d) {
     if (d.done || d.ex || !d.date) return;
-    var n = dayDiff(d.date), run = function () { var q = find(S.deadlines, d.id); if (q) { q.done = true; bump(); save(); renderAll(); } };
+    var n = dayDiff(d.date), run = function () { var q = find(S.deadlines, d.id); if (q) { q.done = true; awardDl(q); save(); renderAll(); } };
     ev.push({ key: 'dl1:' + d.id + ':' + d.date, at: atTime(dk(new Date(pd(d.date).getTime() - 864e5)), '10:00'), kind: 'dl', kicker: 'Дедлайн', title: 'Завтра: ' + d.title, body: fmtDay(d.date), label: 'Сделано', run: run, open: 'deadlines' });
     ev.push({ key: 'dl0:' + d.id + ':' + d.date, at: atTime(d.date, '09:30'), kind: 'dl', kicker: 'Дедлайн', title: 'Сегодня: ' + d.title, body: 'Последний день', label: 'Сделано', run: run, open: 'deadlines' });
     if (n < 0) ev.push({ key: 'dlo:' + d.id + ':' + t, at: atTime(t, '10:00'), kind: 'dl', kicker: 'Дедлайн', title: 'Просрочено: ' + d.title, body: 'На ' + DAYS(-n), label: 'Сделано', run: run, open: 'deadlines' });
   });
   /* люди: максимум один человек в день и не чаще раза в 3 дня */
   var ov = S.people.filter(function (p) { return !p.ex && pRatio(p) >= 1 && (!S.nag[p.id] || -dayDiff(S.nag[p.id]) >= 3); }).sort(function (a, b) { return pRatio(b) - pRatio(a); })[0];
-  if (ov) ev.push({ key: 'pp:' + t, at: atTime(t, '13:00'), kind: 'pp', ref: ov.id, kicker: 'Давно не общались', title: ov.name, body: ov.last ? 'Последний раз ' + rel(dayDiff(ov.last)) : 'Не помню, когда виделись', label: 'Связалась', run: function () { var q = find(S.people, ov.id); if (q) { q.last = today(); bump(); save(); renderAll(); } }, open: 'people' });
+  if (ov) ev.push({ key: 'pp:' + t, at: atTime(t, '13:00'), kind: 'pp', ref: ov.id, kicker: 'Давно не общались', title: ov.name, body: ov.last ? 'Последний раз ' + rel(dayDiff(ov.last)) : 'Не помню, когда виделись', label: 'Связалась', run: function () { var q = find(S.people, ov.id); if (q) { q.last = today(); awardPp(q); save(); renderAll(); } }, open: 'people' });
   /* написать */
   var wr = S.writes.filter(function (w) { return !w.done && !w.ex; });
   if (wr.length) ev.push({ key: 'wr:' + t, at: atTime(t, '15:00'), kind: 'wr', kicker: 'Написать', title: wr.length === 1 ? 'Ждёт ответа: ' + (wr[0].who || 'сообщение') : 'Ждут сообщения: ' + wr.length, body: wr.slice(0, 3).map(function (w) { return w.who || w.text; }).join(', '), open: 'writes', label: 'Понятно' });
@@ -850,8 +912,10 @@ function check() {
 
 /* ---------- награда и тосты ---------- */
 function celebrate() {
-  var r = S.rewards.filter(Boolean), pick = r.length ? r[Math.floor(Math.random() * r.length)] : 'Ты молодец';
-  $('#win-r').textContent = 'Награда: ' + pick;
+  var r = S.rewards.filter(Boolean), pick = r.length ? r[Math.floor(Math.random() * r.length)] : 'Ты молодец', bonus = 0, tk = 'perfect:' + today();
+  if (!S.paid[tk]) { S.paid[tk] = 1; bonus = 10; gain(10); }
+  $('#win-r').textContent = (bonus ? '+10 ★ бонус за идеальный день. ' : '') + 'Личный приз: ' + pick;
+  checkAch({ perfect: true }); renderAll();
   $('#win').hidden = false; cheer(); chime();
   if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   try {
@@ -893,6 +957,7 @@ document.addEventListener('click', function (e) {
     case 'now-done': if (Q[0]) doNow(Q[0]); break;
     case 'now-later': if (Q[0]) { S.snooze[Q[0].id] = today(); save(); renderAll(); } break;
     case 'buddy': {
+      tapEgg();
       if (P.cur && P.cur.key === 'buddy') { popupAction('close'); break; }
       var it = queue()[0];
       var ev = it ? { key: 'buddy', kicker: 'Сейчас', title: it.title, body: it.sub, label: it.btn, run: function () { doNow(it); } }
@@ -911,20 +976,27 @@ document.addEventListener('click', function (e) {
     case 'task-done': d = find(S.tasks, id); if (d) { markTask(d, true); save(); renderAll(); } break;
     case 'task-undo': d = find(S.tasks, id); if (d) { markTask(d, false); save(); renderAll(); } break;
     case 'task-del': d = find(S.tasks, id); if (d) del(S.tasks, id, d.text); break;
-    case 'doc-book': d = find(S.doctors, id); if (d) { d.status = 'booked'; bump(); save(); renderAll(); } break;
-    case 'doc-done': d = find(S.doctors, id); if (d) { d.done = true; bump(); save(); renderAll(); toast('Отмечено: была у «' + d.name + '»', function () { d.done = false; save(); renderAll(); }); } break;
+    case 'doc-book': d = find(S.doctors, id); if (d) { d.status = 'booked'; awardDoc(d, false); save(); renderAll(); } break;
+    case 'doc-done': d = find(S.doctors, id); if (d) { d.done = true; awardDoc(d, true); save(); renderAll(); toast('Отмечено: была у «' + d.name + '»', function () { d.done = false; save(); renderAll(); }); } break;
     case 'doc-del': d = find(S.doctors, id); if (d) del(S.doctors, id, d.name); break;
-    case 'pp-met': d = find(S.people, id); if (d) { d.last = today(); bump(); save(); renderAll(); } break;
+    case 'pp-met': d = find(S.people, id); if (d) { d.last = today(); awardPp(d); save(); renderAll(); } break;
     case 'pp-del': d = find(S.people, id); if (d) del(S.people, id, d.name); break;
-    case 'wr-done': d = find(S.writes, id); if (d) { d.done = true; bump(); save(); renderAll(); } break;
+    case 'wr-done': d = find(S.writes, id); if (d) { d.done = true; awardWr(d); save(); renderAll(); } break;
     case 'wr-undo': d = find(S.writes, id); if (d) { d.done = false; save(); renderAll(); } break;
     case 'wr-del': d = find(S.writes, id); if (d) del(S.writes, id, d.who || 'сообщение'); break;
-    case 'dl-done': d = find(S.deadlines, id); if (d) { d.done = true; bump(); save(); renderAll(); } break;
+    case 'dl-done': d = find(S.deadlines, id); if (d) { d.done = true; awardDl(d); save(); renderAll(); } break;
     case 'dl-undo': d = find(S.deadlines, id); if (d) { d.done = false; save(); renderAll(); } break;
     case 'dl-del': d = find(S.deadlines, id); if (d) del(S.deadlines, id, d.title); break;
     case 'clear-ex':
       ['tasks', 'doctors', 'people', 'writes', 'deadlines'].forEach(function (k) { S[k] = S[k].filter(function (x) { return !x.ex; }); });
       save(); renderAll(); break;
+    case 'game': openGame(); break;
+    case 'game-close': closeGame(); break;
+    case 'g-tab': gtab = id; renderGame(); break;
+    case 'g-buy': buy(b.dataset.k, id); break;
+    case 'g-use': { var on = b.dataset.k === 'c' ? true : S.eq.it.indexOf(id) < 0; useItem(b.dataset.k, id, on); break; }
+    case 'task-df': d = find(S.tasks, id); if (d) { d.df = ((d.df || 2) % 3) + 1; save(); renderAll(); } break;
+    case 'task-tm': d = find(S.tasks, id); if (d) { d.tm = ((d.tm || 1) % 3) + 1; save(); renderAll(); } break;
     case 'win-close': $('#win').hidden = true; break;
     case 'bk-copy':
       try { navigator.clipboard.writeText(backupText()).then(function () { msg('Скопировано'); }, function () { $('#bk-text').value = backupText(); $('#bk-text').select(); msg('Выдели и скопируй текст ниже'); }); }
@@ -956,8 +1028,9 @@ $('#qa').addEventListener('submit', function (e) {
   var wh = $('#qa-when').value, rp = $('#qa-rep').value, defaulted = false;
   if (!wh && rp === 'none') { var ps = parseSpeech(t); if (ps.when || ps.repeat !== 'none') { t = ps.text || t; wh = ps.when; rp = ps.repeat; } }
   if (rp !== 'none' && !wh) { wh = today() + 'T10:00'; defaulted = true; }
-  S.tasks.push({ id: uid(), text: t, when: wh, repeat: rp, done: false, doneDay: '' });
-  e.target.reset(); setHint(''); S.tab = 'tasks'; save(); renderAll(); check();
+  S.tasks.push({ id: uid(), text: t, when: wh, repeat: rp, done: false, doneDay: '', df: +$('#qa-df').value || 2, tm: +$('#qa-tm').value || 1 });
+  if (voiceFlag) { S.voice = (S.voice || 0) + 1; voiceFlag = false; checkAch({}); }
+  e.target.reset(); updatePts(); setHint(''); S.tab = 'tasks'; save(); renderAll(); check();
   if (defaulted) toast('Время не указано, напомню в 10:00');
 });
 $('#f-doc').addEventListener('submit', function (e) {
@@ -989,7 +1062,7 @@ window.addEventListener('focus', check);
 setInterval(function () { tickDay(); check(); }, 20000);
 
 /* ---------- голосовой ввод ---------- */
-var SR = window.SpeechRecognition || window.webkitSpeechRecognition, rec = null, listening = false;
+var SR = window.SpeechRecognition || window.webkitSpeechRecognition, rec = null, listening = false, voiceFlag = false;
 var micBtn = $('#mic'), hint = $('#qa-hint');
 function setHint(t) { hint.textContent = t || ''; hint.hidden = !t; }
 
@@ -1093,7 +1166,7 @@ function toggleListen() {
     listening = false; micBtn.setAttribute('aria-pressed', 'false');
     if (toLocal) { toLocal = false; rememberLocal(); resetFields(); startLocal(); return; }
     var txt = (base + ' ' + finalText).trim() || $('#qa-text').value.trim();
-    if (txt && !failed) finalizeSpeech(txt);
+    if (txt && !failed) { voiceFlag = true; finalizeSpeech(txt); }
     else if (!failed) setHint('Не услышала. Нажми на микрофон и попробуй ещё раз.');
   };
   try { rec.start(); } catch (err) { setHint('Микрофон сейчас занят. Попробуй ещё раз.'); }
@@ -1233,7 +1306,7 @@ async function onLocalStop() {
     if (audio.length < 8000 || peak < 0.01) { setHint('Не услышала. Нажми на микрофон и попробуй ещё раз.'); }
     else {
       var text = await recognize(audio);
-      if (text) finalizeSpeech(text); else setHint('Не услышала. Нажми на микрофон и попробуй ещё раз.');
+      if (text) { voiceFlag = true; finalizeSpeech(text); } else setHint('Не услышала. Нажми на микрофон и попробуй ещё раз.');
     }
   } catch (err) {
     if (err && err.stage === 'load') setHint('Не получилось скачать голосовую модель: нет сети или заблокирован huggingface.co. ' + FALLBACK_TIP);
@@ -1255,6 +1328,227 @@ $('#qa-text').addEventListener('blur', function () {
   var p = parseSpeech(t);
   if (p.when || p.repeat !== 'none') finalizeSpeech(t);
 });
+
+/* ---------- звёздочки, ачивки, уровни и лавка Лу ---------- */
+var DF = { 1: 'Лёгкая', 2: 'Средняя', 3: 'Сложная' }, TM = { 1: 'до 15 мин', 2: 'до часа', 3: 'час и больше' };
+function taskPts(t) { return 2 * (t.df || 2) * (t.tm || 1); }
+function awardDl(d) { bump('dl:' + d.id, 8, { kind: 'dl', d: d }); }
+function awardDoc(d, visit) { bump((visit ? 'docv:' : 'docb:') + d.id, visit ? 6 : 3, { kind: visit ? 'docv' : 'docb' }); }
+function awardWr(w) { bump('wr:' + w.id, 2, { kind: 'wr' }); }
+function awardPp(p) { bump('pp:' + p.id + ':' + today(), 4, { kind: 'pp' }); }
+
+var LEVELS = [0, 15, 40, 80, 140, 220, 330, 480, 680, 950];
+var LV_NAMES = ['Малыш Лу', 'Лу-новичок', 'Лу-помощник', 'Лу-стратег', 'Лу-герой', 'Лу-мастер', 'Лу-легенда', 'Лу-хранитель дедлайнов', 'Лу-чемпион', 'Лу, повелитель дел'];
+function level() { var n = 1; for (var i = 0; i < LEVELS.length; i++) if (S.xp >= LEVELS[i]) n = i + 1; return n; }
+function lvInfo() {
+  var n = level(), cur = LEVELS[n - 1], nx = LEVELS[n];
+  return { n: n, name: LV_NAMES[n - 1], nx: nx, pct: nx ? Math.round(100 * (S.xp - cur) / (nx - cur)) : 100 };
+}
+function showGain(t) {
+  var el = document.createElement('div'); el.className = 'gain'; el.textContent = t; document.body.appendChild(el);
+  setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 1700);
+}
+function gain(n) {
+  if (!n) return;
+  var before = level(); S.stars += n; S.xp += n;
+  if (n > 0) showGain('+' + n + ' ★');
+  var after = level();
+  if (after > before) {
+    enqueue({ key: 'lvl:' + after, kicker: 'Новый уровень', title: 'Уровень ' + after + ': ' + LV_NAMES[after - 1], body: 'Лу растёт вместе с тобой.', label: 'Ура', quiet: true });
+    chime();
+  }
+}
+
+var RAR = { bronze: 'бронза', silver: 'серебро', gold: 'золото', epic: 'эпик', secret: 'секретная' };
+function tot() { var n = 0; Object.keys(S.cnt).forEach(function (k) { n += S.cnt[k]; }); return n; }
+function perfDays() { var n = 0; Object.keys(S.posts).forEach(function (k) { if (postCount(k) >= 6) n++; }); return n; }
+function inWin(min) { var now = Date.now(); return (S.recent || []).filter(function (x) { return now - x <= min * 60000; }).length; }
+function hourNow() { return new Date().getHours(); }
+function cA(id, i, n, d, r, p, N) { return { id: id, i: i, n: n, d: d, r: r, p: p, t: function () { return tot() >= N; }, g: function () { return [tot(), N]; } }; }
+var ACH = [
+  cA('first', '🗡️', 'Первая кровь', 'Закрой своё первое дело', 'bronze', 3, 1),
+  cA('t10', '🔥', 'Разогрелась', 'Закрой 10 дел', 'bronze', 5, 10),
+  cA('t50', '🛡️', 'Ветеран списков', 'Закрой 50 дел', 'silver', 15, 50),
+  cA('t100', '💯', 'Сотка', 'Закрой 100 дел', 'gold', 30, 100),
+  cA('t500', '👑', 'Легенда списков', 'Закрой 500 дел', 'epic', 100, 500),
+  { id: 'day5', i: '✋', n: 'Пятёрочка', d: '5 дел за один день', r: 'bronze', p: 5, t: function () { return (S.closed[today()] || 0) >= 5; }, g: function () { return [Math.min(S.closed[today()] || 0, 5), 5]; } },
+  { id: 'day10', i: '🐺', n: 'Режим зверя', d: '10 дел за один день', r: 'silver', p: 15, t: function () { return (S.closed[today()] || 0) >= 10; }, g: function () { return [Math.min(S.closed[today()] || 0, 10), 10]; } },
+  { id: 'combo3', i: '⚡', n: 'Комбо ×3', d: '3 дела за 30 минут', r: 'bronze', p: 5, t: function () { return inWin(30) >= 3; } },
+  { id: 'combo5', i: '💥', n: 'Мега-комбо', d: '5 дел за 30 минут', r: 'silver', p: 12, t: function () { return inWin(30) >= 5; } },
+  { id: 'early', i: '🐦', n: 'Ранняя пташка', d: 'Закрой дело до 8 утра', r: 'bronze', p: 4, t: function (c) { return c.bump && hourNow() < 8 && hourNow() >= 5; } },
+  { id: 'night', i: '🦉', n: 'Ночной дозор', d: 'Закрой дело после 23:00', h: 'Подсказка: Лу не спит, когда не спишь ты', r: 'secret', p: 8, t: function (c) { return c.bump && (hourNow() >= 23 || hourNow() < 5); } },
+  { id: 'boss', i: '🐉', n: 'Босс повержен', d: 'Закрой задачу, которая стоит 12 ★ и больше', r: 'gold', p: 20, t: function (c) { return c.kind === 'task' && c.bump && c.pts >= 12; } },
+  { id: 'dl1', i: '⏰', n: 'Успел!', d: 'Закрой первый дедлайн', r: 'bronze', p: 4, t: function () { return (S.cnt.dl || 0) >= 1; } },
+  { id: 'dllast', i: '😅', n: 'На последнем дыхании', d: 'Закрой дедлайн в последний день после 20:00', r: 'silver', p: 10, t: function (c) { return c.kind === 'dl' && c.bump && c.d && c.d.date === today() && hourNow() >= 20; } },
+  { id: 'late', i: '🐢', n: 'Лучше поздно, чем никогда', d: 'Закрой просроченный дедлайн', r: 'bronze', p: 4, t: function (c) { return c.kind === 'dl' && c.bump && c.d && c.d.date < today(); } },
+  { id: 'perfect', i: '🌟', n: 'Идеальный день', d: 'Выложи все 6 видео за день', r: 'silver', p: 10, t: function (c) { return !!c.perfect; } },
+  { id: 'perfect7', i: '🎆', n: 'Неделя огня', d: '7 идеальных дней', r: 'gold', p: 30, t: function () { return perfDays() >= 7; }, g: function () { return [Math.min(perfDays(), 7), 7]; } },
+  { id: 'perfect30', i: '🏆', n: 'Месяц без осечек', d: '30 идеальных дней', r: 'epic', p: 100, t: function () { return perfDays() >= 30; }, g: function () { return [Math.min(perfDays(), 30), 30]; } },
+  { id: 'docs3', i: '🩺', n: 'Здоровье — это круто', d: 'Сходи к врачам 3 раза', r: 'silver', p: 10, t: function () { return (S.cnt.docv || 0) >= 3; }, g: function () { return [Math.min(S.cnt.docv || 0, 3), 3]; } },
+  { id: 'wr5', i: '✉️', n: 'Дипломат', d: 'Напиши 5 сообщений из списка', r: 'bronze', p: 6, t: function () { return (S.cnt.wr || 0) >= 5; }, g: function () { return [Math.min(S.cnt.wr || 0, 5), 5]; } },
+  { id: 'pp3', i: '🎈', n: 'Душа компании', d: 'Повидайся с людьми 3 раза', r: 'bronze', p: 6, t: function () { return (S.cnt.pp || 0) >= 3; }, g: function () { return [Math.min(S.cnt.pp || 0, 3), 3]; } },
+  { id: 'shop1', i: '🛍️', n: 'Первая покупка', d: 'Купи что-нибудь в лавке', r: 'bronze', p: 3, t: function (c) { return !!c.shop; } },
+  { id: 'newchar', i: '🐾', n: 'Новый друг', d: 'Открой нового персонажа', r: 'silver', p: 10, t: function () { return S.own.ch.length >= 2; } },
+  { id: 'fashion', i: '💅', n: 'Модница', d: 'Надень 3 аксессуара сразу', r: 'silver', p: 8, t: function () { return S.eq.it.length >= 3; } },
+  { id: 'rich', i: '💰', n: 'Дракон на золоте', d: 'Накопи 150 ★ в кошельке', r: 'silver', p: 10, t: function () { return S.stars >= 150; }, g: function () { return [Math.min(S.stars, 150), 150]; } },
+  { id: 'voice', i: '🎤', n: 'Голос народа', d: 'Закинь задачу голосом', r: 'bronze', p: 5, t: function () { return (S.voice || 0) >= 1; } },
+  { id: 'tap10', i: '🤭', n: 'Не щекочи!', d: 'Нажми на Лу 10 раз подряд', h: 'Подсказка: Лу любит внимание, но не слишком', r: 'secret', p: 5, t: function () { return (S.taps || 0) >= 10; } },
+  { id: 'lvl5', i: '🌱', n: 'Лу вырос', d: 'Дойди до 5 уровня', r: 'gold', p: 25, t: function () { return level() >= 5; }, g: function () { return [Math.min(level(), 5), 5]; } }
+];
+var inCheck = false;
+function checkAch(c) {
+  if (inCheck) return; inCheck = true;
+  try {
+    var again = true, guard = 0;
+    while (again && guard++ < 6) {
+      again = false;
+      ACH.forEach(function (a) {
+        if (S.ach[a.id]) return;
+        var ok = false; try { ok = !!a.t(c || {}); } catch (e) {}
+        if (!ok) return;
+        S.ach[a.id] = Date.now(); gain(a.p); again = true;
+        enqueue({ key: 'ach:' + a.id, kicker: 'Ачивка · ' + RAR[a.r], title: a.i + ' ' + a.n, body: a.d + ' · +' + a.p + ' ★', label: 'Круто', quiet: true });
+        chime(); cheer();
+      });
+    }
+  } finally { inCheck = false; }
+  save();
+}
+var tapT = [];
+function tapEgg() {
+  var n = Date.now(); tapT.push(n); if (tapT.length > 10) tapT.shift();
+  if (tapT.length === 10 && n - tapT[0] < 9000) { S.taps = 10; tapT = []; checkAch({}); renderAll(); }
+}
+(function prune() {
+  var cut = addDays(-40);
+  Object.keys(S.paid).forEach(function (k) { var m = k.match(/\d{4}-\d{2}-\d{2}/); if (m && m[0] < cut) delete S.paid[k]; });
+})();
+
+/* ---------- Лу: персонажи и аксессуары ---------- */
+var LU_TUFT = '<path d="M58 40 C50 22 66 14 70 30 C74 12 92 22 82 40 Z" fill="var(--ch-body)"/>';
+var CHARS = {
+  lu: { n: 'Лу', d: 'Тот самый, с хохолком', price: 0, vars: '', top: LU_TUFT, face: '' },
+  cat: { n: 'Мур', d: 'Кот-напоминатель. Всё замечает', price: 50, vars: '--ch-body:#FFB88C;--ch-belly:#FFF1E6;--ch-ink:#4A2C2A;--ch-blush:#FF9AA2',
+    top: '<path d="M26 62 L34 20 L64 44 Z" fill="var(--ch-body)"/><path d="M114 62 L106 20 L76 44 Z" fill="var(--ch-body)"/><path d="M35 50 L38 30 L52 43 Z" fill="#FFC2D6"/><path d="M105 50 L102 30 L88 43 Z" fill="#FFC2D6"/>',
+    face: '<path d="M66 76 L74 76 L70 81 Z" fill="#FF8FA3"/><g stroke="var(--ch-ink)" stroke-width="1.8" stroke-linecap="round" opacity=".7" fill="none"><path d="M18 80 L38 84"/><path d="M18 91 L38 89"/><path d="M122 80 L102 84"/><path d="M122 91 L102 89"/></g>' },
+  bunny: { n: 'Бу', d: 'Зайка с длинными ушами и отличным слухом', price: 80, vars: '--ch-body:#D8CCFF;--ch-belly:#FFFFFF;--ch-ink:#3B3560;--ch-blush:#FFB3C6',
+    top: '<ellipse cx="50" cy="20" rx="10" ry="27" fill="var(--ch-body)" transform="rotate(-8 50 20)"/><ellipse cx="90" cy="20" rx="10" ry="27" fill="var(--ch-body)" transform="rotate(8 90 20)"/><ellipse cx="50" cy="22" rx="4.5" ry="19" fill="#FFC2D6" transform="rotate(-8 50 22)"/><ellipse cx="90" cy="22" rx="4.5" ry="19" fill="#FFC2D6" transform="rotate(8 90 22)"/>',
+    face: '<ellipse cx="70" cy="77" rx="4" ry="3" fill="#FF8FA3"/>' },
+  bear: { n: 'Тэо', d: 'Мишка. Спокойный, как танк', price: 120, vars: '--ch-body:#C99A6B;--ch-belly:#F6E3CB;--ch-ink:#3A2418;--ch-blush:#F59A8F',
+    top: '<circle cx="34" cy="46" r="14" fill="var(--ch-body)"/><circle cx="106" cy="46" r="14" fill="var(--ch-body)"/><circle cx="34" cy="46" r="7" fill="#E9B98F"/><circle cx="106" cy="46" r="7" fill="#E9B98F"/>',
+    face: '<ellipse cx="70" cy="77" rx="6" ry="4" fill="var(--ch-ink)"/>' },
+  dragon: { n: 'Огонёк', d: 'Дракончик. Дышит на дедлайны', price: 180, vars: '--ch-body:#7BD389;--ch-belly:#EAFFD9;--ch-ink:#1F3D2B;--ch-blush:#FFB199',
+    top: '<path d="M44 46 L36 14 L60 36 Z" fill="#FFD27A"/><path d="M96 46 L104 14 L80 36 Z" fill="#FFD27A"/><path d="M60 40 L66 22 L72 38 Z" fill="#5FBF72"/><path d="M68 38 L76 18 L82 40 Z" fill="#5FBF72"/>',
+    face: '<circle cx="65" cy="77" r="1.8" fill="var(--ch-ink)"/><circle cx="75" cy="77" r="1.8" fill="var(--ch-ink)"/>' }
+};
+var CHAR_ORDER = ['lu', 'cat', 'bunny', 'bear', 'dragon'];
+var ITEMS = {
+  glasses: { n: 'Очки умника', slot: 'face', price: 30, svg: '<g fill="none" stroke="var(--ch-ink)" stroke-width="2.6"><circle cx="52" cy="72" r="11"/><circle cx="88" cy="72" r="11"/><path d="M63 72 H77"/></g>' },
+  bow: { n: 'Бантик', slot: 'head', price: 25, svg: '<g transform="translate(98 46) rotate(15)"><path d="M0 0 L-14 -9 L-14 9 Z" fill="#FF8FB8"/><path d="M0 0 L14 -9 L14 9 Z" fill="#FF8FB8"/><circle r="4" fill="#FF5C9A"/></g>' },
+  scarf: { n: 'Шарфик', slot: 'neck', price: 40, svg: '<path d="M30 108 Q70 130 110 108 L110 119 Q70 141 30 119 Z" fill="#FF8A7A"/><path d="M92 124 L100 140 L111 136 L103 121 Z" fill="#FF6F5E"/>' },
+  hat: { n: 'Праздничный колпак', slot: 'head', price: 50, svg: '<path d="M48 44 L70 0 L92 44 Z" fill="#F2A6E0"/><path d="M52 38 Q70 47 88 38" stroke="#fff" stroke-width="3" fill="none"/><circle cx="70" cy="2" r="6" fill="#FFE07A"/>' },
+  wings: { n: 'Крылышки', slot: 'back', price: 90, svg: '<g fill="#fff" stroke="#8E9CFF" stroke-width="2.6"><path d="M26 74 C2 54 -4 88 12 98 C6 102 20 110 30 100 Z"/><path d="M114 74 C138 54 144 88 128 98 C134 102 120 110 110 100 Z"/></g>' },
+  crown: { n: 'Корона', slot: 'head', price: 150, svg: '<path d="M46 42 L50 14 L61 28 L70 8 L79 28 L90 14 L94 42 Z" fill="#FFD23F" stroke="#E5A800" stroke-width="2" stroke-linejoin="round"/><circle cx="70" cy="30" r="3.5" fill="#FF5C9A"/>' },
+  halo: { n: 'Звёздный ореол', slot: 'head', price: 220, svg: '<ellipse cx="70" cy="12" rx="26" ry="7" fill="none" stroke="#FFD76A" stroke-width="4.5"/><path d="M104 8 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2 z" fill="#FFD76A"/>' }
+};
+var ITEM_ORDER = ['bow', 'glasses', 'scarf', 'hat', 'wings', 'crown', 'halo'];
+function luMarkup(ch, items) {
+  var c = CHARS[ch] || CHARS.lu, it = items || [], s = '<g class="lu-all"><ellipse cx="70" cy="130" rx="36" ry="6" fill="var(--ch-shadow)"/>';
+  it.forEach(function (id) { if (ITEMS[id] && ITEMS[id].slot === 'back') s += ITEMS[id].svg; });
+  s += '<g class="lu-breath">' + c.top +
+    '<g class="lu-arm-l"><ellipse cx="26" cy="88" rx="9" ry="15" transform="rotate(22 26 88)" fill="var(--ch-body)"/></g>' +
+    '<g class="lu-arm-r"><ellipse cx="114" cy="88" rx="9" ry="15" transform="rotate(-22 114 88)" fill="var(--ch-body)"/></g>' +
+    '<ellipse cx="52" cy="122" rx="12" ry="7" fill="var(--ch-body)"/><ellipse cx="88" cy="122" rx="12" ry="7" fill="var(--ch-body)"/>' +
+    '<ellipse cx="70" cy="80" rx="47" ry="43" fill="var(--ch-body)"/><ellipse cx="70" cy="92" rx="30" ry="26" fill="var(--ch-belly)"/>' +
+    '<g class="lu-eyes"><ellipse cx="52" cy="72" rx="5.5" ry="7.5" fill="var(--ch-ink)"/><ellipse cx="88" cy="72" rx="5.5" ry="7.5" fill="var(--ch-ink)"/><circle cx="54" cy="69" r="2" fill="#fff"/><circle cx="90" cy="69" r="2" fill="#fff"/></g>' +
+    '<ellipse cx="40" cy="84" rx="7" ry="4.5" fill="var(--ch-blush)" opacity=".65"/><ellipse cx="100" cy="84" rx="7" ry="4.5" fill="var(--ch-blush)" opacity=".65"/>' +
+    '<path d="M62 83 Q70 91 78 83" fill="none" stroke="var(--ch-ink)" stroke-width="3" stroke-linecap="round"/>' + c.face;
+  it.forEach(function (id) { if (ITEMS[id] && ITEMS[id].slot !== 'back') s += ITEMS[id].svg; });
+  return s + '</g></g>';
+}
+function setLu(el, ch, items) {
+  el.innerHTML = luMarkup(ch, items);
+  el.setAttribute('style', (CHARS[ch] || CHARS.lu).vars || '');
+}
+function thumb(ch, items) {
+  return '<svg class="still" viewBox="-6 -4 152 148" style="' + ((CHARS[ch] || CHARS.lu).vars || '') + '" aria-hidden="true">' + luMarkup(ch, items) + '</svg>';
+}
+var luSig = '';
+function renderLu() {
+  var sig = S.eq.ch + '|' + S.eq.it.join(',');
+  if (sig === luSig) return; luSig = sig;
+  setLu(buddy.querySelector('.lu'), S.eq.ch, S.eq.it);
+}
+
+/* ---------- окно «Звёздочки, ачивки, лавка» ---------- */
+var gOpen = false, gtab = 'ach';
+function openGame() { gOpen = true; $('#game').hidden = false; renderGame(); $('#g-close').focus(); }
+function closeGame() { gOpen = false; $('#game').hidden = true; try { $('#starBtn').focus(); } catch (e) {} }
+function buy(kind, id) {
+  var o = kind === 'c' ? CHARS[id] : ITEMS[id]; if (!o) return;
+  var list = kind === 'c' ? S.own.ch : S.own.it;
+  if (list.indexOf(id) >= 0) return;
+  if (S.stars < o.price) { toast('Не хватает ' + (o.price - S.stars) + ' ★'); return; }
+  S.stars -= o.price; list.push(id);
+  useItem(kind, id, true, true);
+  toast('Куплено: ' + o.n); cheer(); chime();
+  checkAch({ shop: true }); renderAll();
+}
+function useItem(kind, id, on, quiet) {
+  if (kind === 'c') S.eq.ch = id;
+  else {
+    var slot = ITEMS[id].slot;
+    S.eq.it = S.eq.it.filter(function (x) { return x !== id && ITEMS[x].slot !== slot; });
+    if (on) S.eq.it.push(id);
+  }
+  save(); if (!quiet) { checkAch({}); renderAll(); }
+}
+function renderGame() {
+  if (!gOpen) return;
+  var L = lvInfo();
+  setLu($('#g-lu'), S.eq.ch, S.eq.it);
+  $('#g-info').innerHTML = '<p class="g-lv">Уровень ' + L.n + '</p><p class="g-name">' + esc(L.name) + '</p><div class="bar"><i style="width:' + L.pct + '%"></i></div>' +
+    '<p class="note">' + (L.nx ? 'До следующего уровня ещё ' + (L.nx - S.xp) + ' ★ опыта' : 'Максимальный уровень') + '</p><p class="g-bal">★ ' + S.stars + ' в кошельке</p>';
+  var T = [['ach', 'Ачивки'], ['shop', 'Лавка Лу'], ['rules', 'Как зарабатывать']];
+  $('#g-tabs').innerHTML = T.map(function (x) { return '<button type="button" role="tab" data-act="g-tab" data-id="' + x[0] + '" aria-selected="' + (gtab === x[0]) + '">' + x[1] + '</button>'; }).join('');
+  var h = '';
+  if (gtab === 'ach') {
+    var got = ACH.filter(function (a) { return S.ach[a.id]; }), rest = ACH.filter(function (a) { return !S.ach[a.id]; });
+    h = '<p class="note">Открыто ' + got.length + ' из ' + ACH.length + '</p><div class="ach-grid">' + got.concat(rest).map(function (a) {
+      var ok = !!S.ach[a.id], sec = a.r === 'secret' && !ok, pr = '';
+      if (a.g && !ok) { var g = a.g(); pr = '<div class="bar"><i style="width:' + Math.round(100 * g[0] / g[1]) + '%"></i></div><span class="meta">' + g[0] + ' из ' + g[1] + '</span>'; }
+      return '<div class="ach ' + a.r + (ok ? ' got' : '') + '"><span class="ai">' + (sec ? '❓' : a.i) + '</span><div class="am"><b>' + esc(sec ? 'Секретная ачивка' : a.n) + '</b><span class="meta">' + esc(sec ? a.h : a.d) + '</span>' + pr + '</div><span class="ap">' + (ok ? '✓ ' : '') + '+' + a.p + ' ★</span></div>';
+    }).join('') + '</div>';
+  } else if (gtab === 'shop') {
+    var card = function (kind, id, o, prev) {
+      var own = (kind === 'c' ? S.own.ch : S.own.it).indexOf(id) >= 0, on = kind === 'c' ? S.eq.ch === id : S.eq.it.indexOf(id) >= 0, b;
+      if (!own) b = '<button type="button" class="mini pri" data-act="g-buy" data-k="' + kind + '" data-id="' + id + '"' + (S.stars < o.price ? ' aria-disabled="true"' : '') + '>★ ' + o.price + (S.stars < o.price ? ' (ещё ' + (o.price - S.stars) + ')' : '') + '</button>';
+      else if (kind === 'c') b = on ? '<button type="button" class="mini" disabled>Выбран</button>' : '<button type="button" class="mini" data-act="g-use" data-k="c" data-id="' + id + '">Выбрать</button>';
+      else b = '<button type="button" class="mini" data-act="g-use" data-k="i" data-id="' + id + '">' + (on ? 'Снять' : 'Надеть') + '</button>';
+      return '<div class="card-s">' + prev + '<b>' + esc(o.n) + '</b>' + (o.d ? '<span class="meta">' + esc(o.d) + '</span>' : '') + b + '</div>';
+    };
+    h = '<h2>Персонажи</h2><div class="shop">' + CHAR_ORDER.map(function (id) { return card('c', id, CHARS[id], thumb(id, [])); }).join('') + '</div>' +
+      '<h2>Аксессуары</h2><p class="note">По одному на место: на голову, на лицо, на шею и за спину.</p><div class="shop">' +
+      ITEM_ORDER.map(function (id) { return card('i', id, ITEMS[id], thumb(S.eq.ch, [id])); }).join('') + '</div>';
+  } else {
+    h = '<div class="rules"><h2>Как зарабатывать ★</h2>' +
+      '<p><b>Дело</b> стоит 2 × сложность × время. Сложность: лёгкая 1, средняя 2, сложная 3. Время: до 15 минут 1, до часа 2, час и больше 3. Лёгкое и быстрое даёт 2 ★, обычное 4 ★ (по умолчанию), сложное и долгое 18 ★. Сложность и время можно поменять в строке задачи.</p>' +
+      '<p><b>Выкладка:</b> 1 ★ за каждое видео, а за все 6 за день бонус 10 ★.</p>' +
+      '<p><b>Остальное:</b> дедлайн 8 ★, визит к врачу 6 ★, запись к врачу 3 ★, встреча с человеком 4 ★, написать сообщение 2 ★.</p>' +
+      '<p><b>Ачивки</b> дают бонус ★ сразу. Секретные открываются сами, подсказка видна в списке.</p>' +
+      '<h2>Опыт и кошелёк</h2><p>Всё, что ты заработала, копится как <b>опыт</b>, он растит уровень Лу и никогда не тратится. <b>Кошелёк</b> — это те же ★, но их можно потратить в лавке на персонажей и аксессуары.</p>' +
+      '<p class="note">Очки за одно и то же дело дают один раз (за повторяющееся дело раз в день), так что накрутить не получится. Пропущенный день ничего не отнимает.</p></div>';
+  }
+  $('#g-body').innerHTML = h;
+}
+function renderStars() { $('#st-n').textContent = S.stars; $('#st-lv').textContent = 'ур. ' + level(); }
+function renderGameBits() { renderStars(); renderLu(); renderGame(); }
+function updatePts() { var df = +$('#qa-df').value || 2, tm = +$('#qa-tm').value || 1; $('#qa-pts').textContent = '+' + 2 * df * tm + ' ★ за это дело'; }
+
+$('#qa').addEventListener('change', updatePts);
+$('#game').addEventListener('click', function (e) { if (e.target === $('#game')) closeGame(); });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && gOpen) closeGame(); });
+updatePts();
 
 /* ---------- запуск ---------- */
 renderSettings();
