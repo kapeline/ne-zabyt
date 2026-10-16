@@ -1094,7 +1094,12 @@ function toggleListen() {
 
 /* ---------- запасной путь: запись и распознавание прямо в браузере (Whisper, Transformers.js) ---------- */
 var ASR_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
-var ASR_MODELS = [['onnx-community/whisper-small', 'q8'], ['Xenova/whisper-small', 'q8'], ['onnx-community/whisper-base', 'q8']];
+var ASR_MODELS = [
+  ['onnx-community/whisper-large-v3-turbo', { encoder_model: 'q4f16', decoder_model_merged: 'q4f16' }, 'webgpu'],
+  ['onnx-community/whisper-large-v3-turbo', { encoder_model: 'q4', decoder_model_merged: 'q4' }, 'webgpu'],
+  ['onnx-community/whisper-small', 'q8', 'wasm'],
+  ['Xenova/whisper-small', 'q8', 'wasm']
+];
 var lstate = 'idle', lstream = null, lmr = null, lchunks = [], ltimer = 0, asrW = null;
 
 /* Этот код уходит в Web Worker через Blob-URL, поэтому он самодостаточный. */
@@ -1112,11 +1117,14 @@ function asrWorker() {
     T.env.allowLocalModels = false;
     for (var i = 0; i < m.models.length; i++) {
       try {
+        if (m.models[i][2] === 'webgpu') {
+          if (!self.navigator || !self.navigator.gpu || !(await self.navigator.gpu.requestAdapter())) continue;
+        }
         files = {};
-        return await T.pipeline('automatic-speech-recognition', m.models[i][0], { dtype: m.models[i][1], device: 'wasm', progress_callback: onProgress });
+        return await T.pipeline('automatic-speech-recognition', m.models[i][0], { dtype: m.models[i][1], device: m.models[i][2], progress_callback: onProgress });
       } catch (err) { lastErr = err; }
     }
-    throw lastErr;
+    throw lastErr || new Error('no model');
   }
   self.onmessage = async function (e) {
     var m = e.data, stage = 'load';
