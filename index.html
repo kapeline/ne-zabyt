@@ -1094,7 +1094,7 @@ function toggleListen() {
 
 /* ---------- запасной путь: запись и распознавание прямо в браузере (Whisper, Transformers.js) ---------- */
 var ASR_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
-var ASR_MODELS = [['onnx-community/whisper-base', 'q8'], ['Xenova/whisper-base', 'q8']];
+var ASR_MODELS = [['onnx-community/whisper-small', 'q8'], ['Xenova/whisper-small', 'q8'], ['onnx-community/whisper-base', 'q8']];
 var lstate = 'idle', lstream = null, lmr = null, lchunks = [], ltimer = 0, asrW = null;
 
 /* Этот код уходит в Web Worker через Blob-URL, поэтому он самодостаточный. */
