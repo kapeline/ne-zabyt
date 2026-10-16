@@ -581,6 +581,22 @@ function migrate(r) {
   });
   o.deadlines = [];
   if (o.tab === 'deadlines') o.tab = 'tasks';
+  if (!r.regm) {
+    /* один раз: дела «каждую неделю» и «раз в 2 недели» становятся регулярными, одинаковые склеиваются (две тренировки = 2 раза в неделю) */
+    var grp = {}, keep = [];
+    o.tasks.forEach(function (x) {
+      if (x.ex || x.reg || (x.repeat !== 'weekly' && x.repeat !== 'biweekly')) { keep.push(x); return; }
+      var k = String(x.text || '').trim().toLowerCase() + '|' + x.repeat;
+      if (grp[k]) { grp[k].n++; return; }
+      grp[k] = x; x.n = 1; keep.push(x);
+    });
+    Object.keys(grp).forEach(function (k) {
+      var x = grp[k], n = x.n; delete x.n;
+      x.reg = x.repeat === 'weekly' ? { n: Math.min(n, 5), per: 'w' } : { n: 1, per: 'b' };
+      x.log = x.doneDay ? [x.doneDay] : []; x.repeat = 'none'; x.when = ''; x.doneDay = ''; delete x.orig; delete x.cd;
+    });
+    o.tasks = keep; o.regm = 1;
+  }
   return o;
 }
 var S;
