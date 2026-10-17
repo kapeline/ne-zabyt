@@ -427,6 +427,15 @@ html[data-ls="neon"] .list .row { background: color-mix(in srgb, var(--surface-s
       </div>
     </details>
     <details>
+      <summary>Умная сортировка задач</summary>
+      <div class="grp" style="margin-top:10px">
+        <div class="inline"><label><input type="checkbox" id="set-auto"> Сам раскладывать задачи по разделам</label></div>
+        <p class="note">«Записаться на УЗИ» уйдёт во «Врачи», «позвонить маме» в «Написать», «встретиться с Машей» в «Люди», «тренировка 2 раза в неделю» в «Регулярные». Если задали время напоминания, дедлайн или повтор, задача останется в «Задачах». Любую можно перенести кнопкой ✎.</p>
+        <button type="button" class="mini" data-act="sort-now">Разложить уже добавленные</button>
+        <p class="note" id="sort-msg"></p>
+      </div>
+    </details>
+    <details>
       <summary>Анимации и игрушки</summary>
       <div class="grp" style="margin-top:10px">
         <label for="set-fx" class="note">Что падает по бокам</label>
@@ -498,6 +507,7 @@ html[data-ls="neon"] .list .row { background: color-mix(in srgb, var(--surface-s
       <label>Дедлайн<input id="ed-due" type="date"></label>
       <label>Сложность<select id="ed-df"><option value="1">Лёгкая</option><option value="2">Средняя</option><option value="3">Сложная</option></select></label>
       <label>Сколько займёт<select id="ed-tm"><option value="1">До 15 минут</option><option value="2">До часа</option><option value="3">Час и больше</option></select></label>
+      <label>Раздел<select id="ed-cat"><option value="keep">Оставить как есть</option><option value="doctors">Врачи</option><option value="writes">Написать</option><option value="people">Люди</option></select></label>
       <label>Повтор<select id="ed-rep"><option value="none">Не повторять</option><optgroup label="Регулярно, в любой день"><option value="q1w">1 раз в неделю</option><option value="q2w">2 раза в неделю</option><option value="q3w">3 раза в неделю</option><option value="q4w">4 раза в неделю</option><option value="q5w">5 раз в неделю</option><option value="q1b">1 раз в 2 недели</option><option value="q1m">1 раз в месяц</option><option value="q2m">2 раза в месяц</option></optgroup><optgroup label="По расписанию, в конкретный день"><option value="daily">Каждый день</option><option value="weekdays">По будням</option><option value="weekly">Каждую неделю в тот же день</option><option value="biweekly">Раз в 2 недели в тот же день</option><option value="monthly">Каждый месяц</option><option value="yearly">Каждый год</option></optgroup></select></label>
     </div>
     <div class="inline"><button class="submit" type="submit">Сохранить</button><button class="mini" type="button" data-act="edit-close">Отмена</button></div>
@@ -560,7 +570,7 @@ function shiftTime(tm, min) { var p = tm.split(':'), t = (+p[0]) * 60 + (+p[1]) 
 var DEFAULT_REWARDS = ['Чай или кофе и что-нибудь вкусное к нему', '15 минут сериала без чувства вины', 'Прогулка с любимым плейлистом', '10 минут ничегонеделания', 'Написать подруге и просто поболтать'];
 function blank() {
   return { v: 2, ts: 0, mode: 'all', tab: 'tasks', posts: {}, closed: {}, tasks: [], doctors: [], people: [], writes: [], deadlines: [],
-    rewards: DEFAULT_REWARDS.slice(), stars: 0, xp: 0, ach: {}, own: { ch: ['lu'], it: [], sk: ['def'], st: ['def'], fx: [] }, eq: { ch: 'lu', it: [], sk: 'def', st: 'def' }, gems: 0, paid: {}, recent: [], cnt: {}, taps: 0, voice: 0, pops: 0, qd: null, qall: 0, nl: {}, earn: {}, gold: 0, stare: 0, kon: 0, focus: 0, steps: 0, snooze: {}, fired: {}, later: {}, nag: {}, set: { am: '10:00', pm: '19:00', again: true, sound: true, fx: 'cycle', trail: true } };
+    rewards: DEFAULT_REWARDS.slice(), stars: 0, xp: 0, ach: {}, own: { ch: ['lu'], it: [], sk: ['def'], st: ['def'], fx: [] }, eq: { ch: 'lu', it: [], sk: 'def', st: 'def' }, gems: 0, paid: {}, recent: [], cnt: {}, taps: 0, voice: 0, pops: 0, qd: null, qall: 0, nl: {}, earn: {}, gold: 0, stare: 0, kon: 0, focus: 0, steps: 0, snooze: {}, fired: {}, later: {}, nag: {}, set: { am: '10:00', pm: '19:00', again: true, sound: true, fx: 'cycle', trail: true, auto: true }, autom: 0 };
 }
 function seed() {
   var b = blank();
@@ -923,7 +933,7 @@ function renderSettings() {
   var fo = [['cycle', 'Чередовать'], ['petal', 'Лепестки'], ['snow', 'Снег'], ['rain', 'Капли дождя'], ['leaf', 'Листья'], ['bubble', 'Пузырьки (их можно лопать)'], ['firefly', 'Светлячки']];
   (S.own.fx || []).forEach(function (id) { if (FLY[id]) fo.push([id, FLY[id].n]); }); fo.push(['off', 'Выключить']);
   $('#set-fx').innerHTML = fo.map(function (x) { return '<option value="' + x[0] + '">' + x[1] + '</option>'; }).join('');
-  $('#set-fx').value = S.set.fx || 'cycle'; $('#set-trail').checked = S.set.trail !== false;
+  $('#set-fx').value = S.set.fx || 'cycle'; $('#set-trail').checked = S.set.trail !== false; $('#set-auto').checked = S.set.auto !== false;
   if (typeof FX !== 'undefined' && FX && FX.apply) FX.apply();
   $('#rewards').value = S.rewards.join('\n');
 }
@@ -1196,6 +1206,7 @@ document.addEventListener('click', function (e) {
       a2.href = url; a2.download = 'ne-zabyt-' + today() + '.json'; document.body.appendChild(a2); a2.click(); a2.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
       break;
     }
+    case 'sort-now': { var mvd = sortExisting(); save(); renderAll(); $('#sort-msg').textContent = mvd.length ? 'Разложено: ' + mvd.length : 'Всё уже на своих местах'; if (mvd.length) announceSorted(mvd); break; }
     case 'bk-load':
       try { var o = JSON.parse($('#bk-text').value); if (!o || typeof o !== 'object' || !o.v) throw 0; S = migrate(o); save(); renderSettings(); renderAll(); msg('Загружено'); }
       catch (err) { msg('Не получилось: это не похоже на копию'); }
@@ -1210,23 +1221,134 @@ document.addEventListener('change', function (e) {
   if (el.id === 'set-again') { S.set.again = el.checked; save(); }
   if (el.id === 'set-fx') { S.set.fx = el.value; save(); FX.apply(); }
   if (el.id === 'set-trail') { S.set.trail = el.checked; save(); }
+  if (el.id === 'set-auto') { S.set.auto = el.checked; save(); }
   if (el.id === 'set-sound') { S.set.sound = el.checked; save(); if (el.checked) chime(); }
   if (el.id === 'rewards') { S.rewards = el.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean); save(); }
 });
 
+
+/* ---------- автораспределение по разделам ---------- */
+function nrm(x) { return String(x || '').toLowerCase().replace(/ё/g, 'е'); }
+function cre(stems, exact) {
+  var p = [];
+  if (stems.length) p.push('(?:' + stems.join('|') + ')[а-я]*');
+  if (exact && exact.length) p.push('(?:' + exact.join('|') + ')');
+  return new RegExp('(?:^|[^а-я0-9])(?:' + p.join('|') + ')(?![а-я0-9])');
+}
+var DOC_RE = cre(['врач', 'доктор', 'терапевт', 'стоматолог', 'гинеколог', 'офтальмолог', 'окулист', 'невролог', 'невропатолог', 'кардиолог', 'дерматолог', 'эндокринолог', 'уролог', 'хирург', 'ортопед', 'педиатр', 'психиатр', 'психотерапевт', 'маммолог', 'онколог', 'аллерголог', 'гастроэнтеролог', 'проктолог', 'травматолог', 'диетолог', 'нутрициолог', 'трихолог', 'флеболог', 'ревматолог', 'пульмонолог', 'отоларинголог', 'логопед', 'остеопат', 'иммунолог', 'нефролог', 'эхокардиограф', 'ультразвук', 'томограф', 'флюорограф', 'рентген', 'гастроскоп', 'колоноскоп', 'кардиограмм', 'диспансеризац', 'поликлиник', 'медосмотр', 'прививк', 'вакцинац', 'пломб', 'кариес', 'чистк[а-я]* зуб', 'удал[а-я]* зуб', 'лечени[а-я]* зуб'], ['лор', 'узи', 'мрт', 'кт', 'экг', 'эхокг', 'ээг']);
+var DOC_AN = /(?:сдать|сдача|пересдать|сдам|сдаем)\s+(?:общий\s+|биохимический\s+|[а-я]+\s+)?(?:анализы|анализ\s+(?:крови|мочи|кала|на)|кров[а-я]*|мочу|мазок|кал(?![а-я]))/;
+var WR_NOW = /^(?:(?:надо|нужно|не забыть|не забудь|еще)\s+)*(позвонить|перезвонить|набрать|отписать(?:ся)?)(?![а-я])/;
+var WR_MSG = /^(?:(?:надо|нужно|не забыть|не забудь|еще)\s+)*(написать|ответить|сообщить|спросить|уточнить|отправить|черкнуть)(?![а-я])/;
+var WR_WHO = /(?:^|[^а-я])(?:мам|пап|бабушк|дедушк|сестр|брат|муж|жен[ауые]|подруг|друг[уа]|соседк|начальник|руковод|подрядчик|клиент|коллег|заказчик|поставщик|менеджер|бухгалтер|юрист|директор)[а-я]*/;
+var WR_WORD = /(?:письм|сообщен|смс|мейл|емейл|email|почт|в чат|телеграм|вотсап|ватсап|whatsapp|директ)/;
+var PP_RE = /(?:^|[^а-я])(?:встретиться|встретимся|увидеться|повидаться|повидать|навестить|созвониться|в гости|кофе с|пообщаться с|погулять с|пообедать с|поужинать с|сходить с)(?![а-я])/;
+var PP_STOP = /^(?:коллегами|ними|нами|всеми|кем|кем-то|кем-нибудь|собой|тобой|вами|ним|ней|ним)$/;
+function capz(x) { x = String(x || '').trim(); return x ? x.charAt(0).toUpperCase() + x.slice(1) : x; }
+function abbr(x) { return x.replace(/(^|[^А-Яа-яЁё])(узи|мрт|экг|кт|лор|ээг)(?![А-Яа-яЁё])/gi, function (m, a, b) { return a + b.toUpperCase(); }); }
+function detectReg(text) {
+  var n = nrm(text), m, code = '', cut;
+  var NUM = { 'один': 1, 'одну': 1, 'два': 2, 'две': 2, 'дважды': 2, 'три': 3, 'трижды': 3, 'четыре': 4, 'пять': 5 };
+  function num(a, b) { return a ? +a : (b ? (NUM[b] || 1) : 1); }
+  if ((m = /(?:^|[^а-я0-9])((?:раз|один раз)\s+в\s+(?:2|две|два)\s+недел[а-я]*)/.exec(n))) { code = 'q1b'; cut = m[1]; }
+  else if ((m = /(?:^|[^а-я0-9])(?:(\d)\s*|(один|одну|два|две|три|четыре|пять)\s+)?(раза?|раз)\s+в\s+(недел[а-я]*|месяц[а-я]*)/.exec(n))) {
+    var k = num(m[1], m[2]); cut = m[0].replace(/^[^а-я0-9]/, '');
+    if (/^недел/.test(m[4])) { if (k >= 1 && k <= 5) code = 'q' + k + 'w'; } else code = k >= 2 ? 'q2m' : 'q1m';
+  }
+  else if ((m = /(?:^|[^а-я0-9])(дважды|трижды)\s+в\s+недел[а-я]*/.exec(n))) { code = 'q' + num(0, m[1]) + 'w'; cut = m[0].replace(/^[^а-я0-9]/, ''); }
+  else if ((m = /(?:^|[^а-я0-9])(еженедельно)(?![а-я])/.exec(n))) { code = 'q1w'; cut = m[1]; }
+  else if ((m = /(?:^|[^а-я0-9])(ежемесячно)(?![а-я])/.exec(n))) { code = 'q1m'; cut = m[1]; }
+  if (!code || !parseRep(code)) return null;
+  var i = n.indexOf(cut), out = (text.slice(0, i) + ' ' + text.slice(i + cut.length)).replace(/\s+/g, ' ').replace(/\s+([,.;])/g, '$1').replace(/^[\s,.;:-]+|[\s,.;:-]+$/g, '');
+  out = out.replace(/\s+(?:по|на)$/i, '');
+  return { code: code, text: out ? capz(out) : text };
+}
+function detectCat(text, ctx) {
+  ctx = ctx || {}; var raw = String(text || '').trim(), n = nrm(raw);
+  if (!n) return null;
+  var plan = /^(?:(?:надо|нужно|не забыть|не забудь)\s+)*(?:записаться|записать|запись|запишись|записывайся)(?![а-я])/.test(n);
+  if (DOC_RE.test(n) || DOC_AN.test(n)) {
+    if (plan && ctx.when) return null;
+    var nm = raw.replace(/^(?:(?:надо|нужно|не забыть|не забудь)\s+)*(?:записаться|записать себя|записать|запись)\s+(?:к|на|в)\s+/i, '').replace(/^(?:(?:надо|нужно)\s+)+/i, '');
+    nm = abbr(capz(nm || raw));
+    return { cat: 'doctors', entry: { id: uid(), name: nm, status: (ctx.when && !plan) ? 'booked' : 'todo', when: (ctx.when && !plan) ? ctx.when : '', note: '', done: false } };
+  }
+  if (ctx.when) return null;
+  var toks = raw.split(/\s+/), isNow = WR_NOW.test(n), isMsg = WR_MSG.test(n);
+  if (isNow || isMsg) {
+    var cap = ''; for (var i = 1; i < toks.length; i++) { var w = toks[i].replace(/[.,;:!?«»"()]/g, ''); if (/^[А-ЯЁA-Z][а-яёa-z]{1,}/.test(w)) { cap = w; break; } }
+    var rel = ''; for (var j = 1; j < toks.length; j++) { var w2 = toks[j].replace(/[.,;:!?«»"()]/g, ''); if (WR_WHO.test(' ' + nrm(w2))) { rel = w2; break; } }
+    if (isNow || cap || rel || WR_WORD.test(n) || WR_WHO.test(n)) {
+      var who = cap || rel, rest;
+      if (cap) { var ci = toks.findIndex(function (x, ix) { return ix > 0 && x.replace(/[.,;:!?«»"()]/g, '') === cap; }), nx = toks[ci + 1]; if (nx && /^[А-ЯЁ][а-яё]+[.,;:!?]*$/.test(nx)) { who = cap + ' ' + nx.replace(/[.,;:!?]/g, ''); rest = toks.filter(function (x, ix) { return ix !== ci && ix !== ci + 1; }).join(' '); } }
+      if (rest === undefined) rest = toks.filter(function (x, ix) { return ix === 0 || x.replace(/[.,;:!?«»"()]/g, '') !== who; }).join(' ');
+      return { cat: 'writes', entry: { id: uid(), who: who, text: capz(rest), done: false } };
+    }
+  }
+  if (PP_RE.test(n)) {
+    var mm, re = /(?:^|\s)(?:с|со|к|ко|у)\s+([А-ЯЁA-Zа-яёa-z][А-Яа-яЁёA-Za-z\-]+)(\s+[А-ЯЁA-Z][а-яё]+)?/g, nm2 = '';
+    while ((mm = re.exec(raw))) { if (PP_STOP.test(nrm(mm[1])) || nrm(mm[1]).length < 3) continue; nm2 = mm[1] + (mm[2] && /^[А-ЯЁA-Z]/.test(mm[1]) ? mm[2] : ''); break; }
+    if (nm2) return { cat: 'people', entry: { id: uid(), name: capz(nm2), every: 30, last: '' } };
+  }
+  return null;
+}
+var CAT_TAB = { doctors: 'doctors', writes: 'writes', people: 'people', reg: 'reg' };
+var CAT_NAME = { doctors: 'Врачи', writes: 'Написать', people: 'Люди', reg: 'Регулярные' };
+function putEntry(cat, entry) { S[cat].push(entry); }
+function dropEntry(cat, id) { var i = S[cat].findIndex(function (x) { return x.id === id; }); if (i >= 0) S[cat].splice(i, 1); }
+/* ручной перенос задачи в раздел (из окна «Изменить») */
+function moveTask(t, cat) {
+  var base = { doctors: { id: uid(), name: abbr(capz(t.text)), status: t.when ? 'booked' : 'todo', when: t.when || '', note: '', done: false },
+    writes: { id: uid(), who: '', text: capz(t.text), done: false },
+    people: { id: uid(), name: capz(t.text), every: 30, last: '' } };
+  var r = detectCat(t.text, { when: '' }), e = base[cat];
+  if (r && r.cat === cat) { e = r.entry; if (cat === 'doctors' && t.when) { e.status = 'booked'; e.when = t.when; } }
+  var i = S.tasks.indexOf(t); if (i >= 0) S.tasks.splice(i, 1);
+  S[cat].push(e); S.tab = cat; return e;
+}
+/* разложить уже лежащие в «Задачах» */
+function sortExisting() {
+  var moved = [];
+  S.tasks.slice().forEach(function (t) {
+    if (t.done || t.reg || t.due || t.ex || (t.pr || 0) > 0 || (t.repeat && t.repeat !== 'none')) return;
+    var rg = !t.when && detectReg(t.text);
+    if (rg) { t.reg = parseRep(rg.code); t.log = []; t.text = rg.text; t.when = ''; moved.push({ text: t.text, to: 'reg' }); return; }
+    var r = detectCat(t.text, { when: t.when || '' });
+    if (!r) return;
+    var i = S.tasks.indexOf(t); if (i >= 0) S.tasks.splice(i, 1);
+    S[r.cat].push(r.entry); moved.push({ text: t.text, to: r.cat });
+  });
+  return moved;
+}
+function announceSorted(moved) {
+  var n = moved.length; if (!n) return;
+  var list = moved.slice(0, 3).map(function (m) { return '«' + m.text + '» → ' + CAT_NAME[m.to]; }).join('; ') + (n > 3 ? ' и ещё ' + (n - 3) : '');
+  enqueue({ key: 'sorted:' + Date.now(), kicker: 'Разложил по местам', title: n === 1 ? 'Одна задача нашла свой раздел' : n + ' ' + plural(n, ['задача нашла', 'задачи нашли', 'задач нашли']) + ' свой раздел', body: list, label: 'Круто', quiet: true });
+}
+
 $('#qa').addEventListener('submit', function (e) {
   e.preventDefault(); var t = $('#qa-text').value.trim(); if (!t) return;
   var wh = $('#qa-when').value, rp = $('#qa-rep').value, due = $('#qa-due').value, defaulted = false, reg = parseRep(rp);
+  var auto = S.set.auto !== false, manualWh = !!wh, routed = null;
+  if (!reg && auto && rp === 'none' && !due && !wh) { var rg = detectReg(t); if (rg) { reg = parseRep(rg.code); t = rg.text; routed = 'reg'; } }
   if (reg) { rp = 'none'; wh = ''; }
   if (!reg && !wh && rp === 'none') { var ps = parseSpeech(t); if (ps.when || ps.repeat !== 'none') { t = ps.text || t; wh = ps.when; rp = ps.repeat; } }
   if (!reg && rp !== 'none' && !wh) { wh = today() + 'T10:00'; defaulted = true; }
   var nt = { id: uid(), text: t, when: wh, repeat: rp, done: false, doneDay: '', df: +$('#qa-df').value || 2, tm: +$('#qa-tm').value || 1, cr: Date.now() };
   if (reg) { nt.reg = reg; nt.log = []; }
   if (due && !reg) nt.due = due;
-  S.tasks.push(nt);
+  var rc = (!reg && auto && rp === 'none' && !due) ? detectCat(t, { when: wh }) : null;
+  if (rc) { putEntry(rc.cat, rc.entry); routed = rc.cat; } else S.tasks.push(nt);
   var wasV0 = voiceFlag; if (voiceFlag) { S.voice = (S.voice || 0) + 1; voiceFlag = false; checkAch({}); }
   var thx = /спасибо/i.test(t) && /(^|[\s,.!?«"])лу([\s,.!?»"]|$)/i.test(t);
-  e.target.reset(); updatePts(); setHint(''); S.tab = reg ? 'reg' : 'tasks'; save(); renderAll(); check();
+  e.target.reset(); updatePts(); setHint(''); S.tab = routed ? CAT_TAB[routed] : (reg ? 'reg' : 'tasks'); save(); renderAll(); check();
+  if (routed) {
+    var ent = rc ? rc.entry : null;
+    toast('Отнесла в «' + CAT_NAME[routed] + '»', function () {
+      if (ent) { dropEntry(routed, ent.id); S.tasks.push(nt); } else { delete nt.reg; delete nt.log; }
+      S.tab = 'tasks'; save(); renderAll();
+    });
+    say('', 'Лу сам разложил: «' + CAT_NAME[routed] + '». Руками не пришлось.');
+  } else
   if (thx) { say('', 'Пожалуйста. Лу краснеет.'); checkAch({ thanks: true }); } else say(wasV0 ? 'voice' : 'added');
   if (defaulted) toast('Время не указано, напомню в 10:00');
 });
@@ -1235,7 +1357,7 @@ var editId = '';
 function openEdit(id) {
   var t = find(S.tasks, id); if (!t) return; editId = id;
   $('#ed-text').value = t.text; $('#ed-when').value = t.when || ''; $('#ed-due').value = t.due || '';
-  $('#ed-df').value = String(t.df || 2); $('#ed-tm').value = String(t.tm || 1); $('#ed-rep').value = repValue(t);
+  $('#ed-df').value = String(t.df || 2); $('#ed-tm').value = String(t.tm || 1); $('#ed-rep').value = repValue(t); $('#ed-cat').value = 'keep';
   $('#edit').hidden = false; $('#ed-text').focus();
 }
 function closeEdit() { $('#edit').hidden = true; editId = ''; }
@@ -1245,7 +1367,10 @@ $('#f-edit').addEventListener('submit', function (e) {
   t.text = tx; t.df = +$('#ed-df').value || 2; t.tm = +$('#ed-tm').value || 1;
   if (reg) { t.reg = reg; t.log = t.log || []; t.repeat = 'none'; t.when = ''; t.due = ''; }
   else { delete t.reg; t.repeat = rp; t.due = $('#ed-due').value || ''; if (rp !== 'none' && !wh) wh = today() + 'T10:00'; if (wh !== (t.when || '')) { delete t.orig; t.cd = 0; } t.when = wh; }
-  closeEdit(); say('', 'Поправил. Лу всё обновил.'); save(); renderAll(); check();
+  var cat = $('#ed-cat').value;
+  closeEdit();
+  if (cat && cat !== 'keep') { moveTask(t, cat); say('', 'Переехало в «' + CAT_NAME[cat] + '».'); } else say('', 'Поправил. Лу всё обновил.');
+  save(); renderAll(); check();
 });
 $('#edit').addEventListener('click', function (e) { if (e.target === $('#edit')) closeEdit(); });
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('#edit').hidden) closeEdit(); });
@@ -2306,10 +2431,13 @@ try { FX = (function () {
 /* ---------- запуск ---------- */
 applySkin();
 var mv0 = carryOver();
+var srt0 = [];
+if (!S.autom) { S.autom = 1; if (S.set.auto !== false) { srt0 = sortExisting(); } save(); }
 renderSettings();
 renderAll();
 FX.apply();
 if (mv0) announceCarry(mv0);
+if (srt0.length) announceSorted(srt0);
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   navigator.serviceWorker.register('sw.js').then(function (r) { swReg = r; }, function () {});
 }
