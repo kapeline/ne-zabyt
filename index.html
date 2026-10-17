@@ -1332,7 +1332,7 @@ function moveTask(t, cat) {
 function sortExisting() {
   var moved = [];
   S.tasks.slice().forEach(function (t) {
-    if (t.done || t.reg || t.due || t.ex || (t.pr || 0) > 0 || (t.repeat && t.repeat !== 'none')) return;
+    if (t.done || t.reg || t.due || t.ex || (t.pr || 0) > 3 || (t.repeat && t.repeat !== 'none')) return;
     var rg = !t.when && detectReg(t.text);
     if (rg) { t.reg = parseRep(rg.code); t.log = []; t.text = rg.text; t.when = ''; moved.push({ text: t.text, to: 'reg' }); return; }
     var r = detectCat(t.text, { when: t.when || '' });
@@ -2455,7 +2455,7 @@ try { FX = (function () {
 applySkin();
 var mv0 = carryOver();
 var srt0 = [];
-if ((S.autom || 0) < 3) { S.autom = 3; if (S.set.auto !== false) { srt0 = sortExisting(); } save(); }
+if ((S.autom || 0) < 4) { S.autom = 4; if (S.set.auto !== false) { srt0 = sortExisting(); } save(); }
 renderSettings();
 renderAll();
 FX.apply();
