@@ -911,7 +911,7 @@ function renderLists() {
   /* написать */
   var wo = S.writes.filter(function (w) { return !w.done; }), wd = S.writes.filter(function (w) { return w.done; });
   var wrow = function (w, done) {
-    return '<li class="row"><div class="main"><strong>' + esc(w.who || 'Без имени') + '</strong>' + (w.text ? '<span class="meta">' + esc(w.text) + '</span>' : '') + '</div><div class="side"><button type="button" class="mini' + (done ? '' : ' pri') + '" data-act="' + (done ? 'wr-undo' : 'wr-done') + '" data-id="' + w.id + '">' + (done ? 'Вернуть' : 'Написала') + '</button><button type="button" class="x" data-act="wr-del" data-id="' + w.id + '" aria-label="Удалить">×</button></div></li>';
+    return '<li class="row"><div class="main"><strong>' + esc(w.who || 'Без имени') + '</strong>' + (w.text ? '<span class="meta">' + esc(w.text) + '</span>' : '') + (w.when && !done ? '<span class="meta">напомню: ' + esc(fmtDT(w.when)) + '</span>' : '') + '</div><div class="side"><button type="button" class="mini' + (done ? '' : ' pri') + '" data-act="' + (done ? 'wr-undo' : 'wr-done') + '" data-id="' + w.id + '">' + (done ? 'Вернуть' : 'Написала') + '</button><button type="button" class="x" data-act="wr-del" data-id="' + w.id + '" aria-label="Удалить">×</button></div></li>';
   };
   $('#l-writes').innerHTML = wo.length ? wo.map(function (w) { return wrow(w, false); }).join('') : '<li class="empty">Никому ничего не висит. Если вспомнишь, закинь сюда, пока не забыла.</li>';
   $('#l-writes-done').innerHTML = wd.map(function (w) { return wrow(w, true); }).join('');
@@ -1048,6 +1048,10 @@ function events(off) {
       at = atTime(t, hhmm(x.when)); key = 'task:' + x.id + ':' + t;
     } else { at = new Date(x.when).getTime(); key = 'task:' + x.id + ':' + x.when; }
     ev.push({ key: key, at: at, kind: 'task', ref: x.id, kicker: 'Лу напоминает', title: x.text, body: '', label: 'Сделано', run: function () { var q = find(S.tasks, x.id); if (q) { markTask(q, true); save(); renderAll(); } } });
+  });
+  S.writes.forEach(function (w) {
+    if (w.done || w.ex || !w.when) return;
+    ev.push({ key: 'wrt:' + w.id + ':' + w.when, at: new Date(w.when).getTime(), kind: 'wr', ref: w.id, kicker: 'Написать', title: (w.who ? w.who + ': ' : '') + (w.text || 'написать'), body: '', label: 'Написала', run: function () { var q = find(S.writes, w.id); if (q) { q.done = true; awardWr(q); save(); renderAll(); } }, open: 'writes' });
   });
   /* врачи */
   var todo = S.doctors.filter(function (d) { return !d.done && !d.ex && d.status === 'todo'; });
@@ -1237,10 +1241,14 @@ function cre(stems, exact) {
 }
 var DOC_RE = cre(['врач', 'доктор', 'терапевт', 'стоматолог', 'гинеколог', 'офтальмолог', 'окулист', 'невролог', 'невропатолог', 'кардиолог', 'дерматолог', 'эндокринолог', 'уролог', 'хирург', 'ортопед', 'педиатр', 'психиатр', 'психотерапевт', 'маммолог', 'онколог', 'аллерголог', 'гастроэнтеролог', 'проктолог', 'травматолог', 'диетолог', 'нутрициолог', 'трихолог', 'флеболог', 'ревматолог', 'пульмонолог', 'отоларинголог', 'логопед', 'остеопат', 'иммунолог', 'нефролог', 'эхокардиограф', 'ультразвук', 'томограф', 'флюорограф', 'рентген', 'гастроскоп', 'колоноскоп', 'кардиограмм', 'диспансеризац', 'поликлиник', 'медосмотр', 'прививк', 'вакцинац', 'пломб', 'кариес', 'чистк[а-я]* зуб', 'удал[а-я]* зуб', 'лечени[а-я]* зуб'], ['лор', 'узи', 'мрт', 'кт', 'экг', 'эхокг', 'ээг']);
 var DOC_AN = /(?:сдать|сдача|пересдать|сдам|сдаем)\s+(?:общий\s+|биохимический\s+|[а-я]+\s+)?(?:анализы|анализ\s+(?:крови|мочи|кала|на)|кров[а-я]*|мочу|мазок|кал(?![а-я]))/;
-var WR_NOW = /^(?:(?:надо|нужно|не забыть|не забудь|еще)\s+)*(позвонить|перезвонить|набрать|отписать(?:ся)?)(?![а-я])/;
-var WR_MSG = /^(?:(?:надо|нужно|не забыть|не забудь|еще)\s+)*(написать|ответить|сообщить|спросить|уточнить|отправить|черкнуть)(?![а-я])/;
-var WR_WHO = /(?:^|[^а-я])(?:мам|пап|бабушк|дедушк|сестр|брат|муж|жен[ауые]|подруг|друг[уа]|соседк|начальник|руковод|подрядчик|клиент|коллег|заказчик|поставщик|менеджер|бухгалтер|юрист|директор)[а-я]*/;
-var WR_WORD = /(?:письм|сообщен|смс|мейл|емейл|email|почт|в чат|телеграм|вотсап|ватсап|whatsapp|директ)/;
+var PREP1 = /^(?:у|с|со|к|ко)$/i;
+var WR_FILL = /^(?:(?:надо|нужно|необходимо|не забыть|не забудь|срочно|еще|хочу|хотела|потом|завтра|сегодня|обязательно|быстро|ну|просто|можно|пора|уже)\s+)*/;
+var WR_STRONG = /^(позвонить|позвони|перезвонить|перезвони|отзвониться|отзвонить|набрать|сообщить|сообщи|спросить|спроси|уточнить|уточни|ответить|ответь|напомнить|напомни|связаться|свяжись|поздравить|поздравь|предупредить|предупреди|уведомить|пригласить|отписать|отписаться|отпиши|написать|напиши|черкнуть|отправить|отправь|скинуть|скинь|переслать|перешли|выслать|вышли|дать знать)(?![а-я])/;
+var WR_NEEDREC = /^(договориться|согласовать|запросить|попросить|узнать|передать|сказать|поблагодарить|извиниться|подтвердить|напомнить)(?![а-я])/;
+var WR_OBJ = /^(?:отчет|статью|статья|текст|пост|код|сценарий|скрипт|заявлени|договор|приложени|документ|план|смету|смета|отзыв|диплом|тз|бриф|презентаци|речь|книгу|стих|рассказ|программ|инструкци|регламент|заметк|резюме|курсов|конспект|диссертаци|проект|тест|сайт|дизайн|макет|копирайт|описани|поздравлени|открытк)/;
+var WR_SEND = /^(отправить|отправь|скинуть|скинь|переслать|перешли|выслать|вышли)/;
+var WR_WHO = /(?:^|[^а-я])(?:мам|пап|бабушк|дедушк|сестр|брат|муж|жен[ауые]|подруг|друг[уа]|соседк|начальник|руковод|подрядчик|клиент|коллег|заказчик|поставщик|менеджер|бухгалтер|юрист|директор|врач|учител|воспитател|куратор|хозяин|хозяйк|арендодател|продавц|мастер|курьер|водител|поддержк|банк|налогов|школ|садик|управляющ|тсж|сантехник|электрик|риелтор|агент)[а-я]*/;
+var WR_WORD = /(?:письм|сообщен|смс|мейл|емейл|email|почт|в чат|в телеграм|телеграм|вотсап|ватсап|whatsapp|директ|в лс|в личк)/;
 var PP_RE = /(?:^|[^а-я])(?:встретиться|встретимся|увидеться|повидаться|повидать|навестить|созвониться|в гости|кофе с|пообщаться с|погулять с|пообедать с|поужинать с|сходить с)(?![а-я])/;
 var PP_STOP = /^(?:коллегами|ними|нами|всеми|кем|кем-то|кем-нибудь|собой|тобой|вами|ним|ней|ним)$/;
 function capz(x) { x = String(x || '').trim(); return x ? x.charAt(0).toUpperCase() + x.slice(1) : x; }
@@ -1271,18 +1279,34 @@ function detectCat(text, ctx) {
     nm = abbr(capz(nm || raw));
     return { cat: 'doctors', entry: { id: uid(), name: nm, status: (ctx.when && !plan) ? 'booked' : 'todo', when: (ctx.when && !plan) ? ctx.when : '', note: (ctx.when && plan) ? 'Напомнить: ' + fmtDay(ctx.when.slice(0, 10)) + (ctx.when.length > 10 ? ', ' + ctx.when.slice(11, 16) : '') : '', done: false } };
   }
-  if (ctx.when) return null;
-  var toks = raw.split(/\s+/), isNow = WR_NOW.test(n), isMsg = WR_MSG.test(n);
-  if (isNow || isMsg) {
-    var cap = ''; for (var i = 1; i < toks.length; i++) { var w = toks[i].replace(/[.,;:!?«»"()]/g, ''); if (/^[А-ЯЁA-Z][а-яёa-z]{1,}/.test(w)) { cap = w; break; } }
-    var rel = ''; for (var j = 1; j < toks.length; j++) { var w2 = toks[j].replace(/[.,;:!?«»"()]/g, ''); if (WR_WHO.test(' ' + nrm(w2))) { rel = w2; break; } }
-    if (isNow || cap || rel || WR_WORD.test(n) || WR_WHO.test(n)) {
-      var who = cap || rel, rest;
-      if (cap) { var ci = toks.findIndex(function (x, ix) { return ix > 0 && x.replace(/[.,;:!?«»"()]/g, '') === cap; }), nx = toks[ci + 1]; if (nx && /^[А-ЯЁ][а-яё]+[.,;:!?]*$/.test(nx)) { who = cap + ' ' + nx.replace(/[.,;:!?]/g, ''); rest = toks.filter(function (x, ix) { return ix !== ci && ix !== ci + 1; }).join(' '); } }
-      if (rest === undefined) rest = toks.filter(function (x, ix) { return ix === 0 || x.replace(/[.,;:!?«»"()]/g, '') !== who; }).join(' ');
-      return { cat: 'writes', entry: { id: uid(), who: who, text: capz(rest), done: false } };
+  var toks = raw.split(/\s+/), nf = n.replace(WR_FILL, ''), skipN = n.slice(0, n.length - nf.length).split(/\s+/).filter(Boolean).length;
+  var strong = WR_STRONG.exec(nf), needRec = !strong && WR_NEEDREC.exec(nf);
+  if (strong || needRec) {
+    var clean = function (x) { return x.replace(/[.,;:!?«»"()]/g, ''); };
+    var vi = skipN, cap = '', rel = '', dat = '';
+    for (var i = vi + 1; i < toks.length; i++) { var w = clean(toks[i]); if (/^[А-ЯЁA-Z][а-яёa-z]{1,}/.test(w)) { cap = w; break; } }
+    for (var j = vi + 1; j < toks.length; j++) { var w2 = clean(toks[j]); if (WR_WHO.test(' ' + nrm(w2))) { rel = w2; break; } }
+    var obj = toks[vi + 1] ? nrm(clean(toks[vi + 1])) : '', objBad = WR_OBJ.test(obj);
+    var isSend = strong && WR_SEND.test(nf), isWrite = strong && /^(написать|напиши)/.test(nf);
+    if (!cap && !rel) {
+      var t1 = toks[vi + 1] ? clean(toks[vi + 1]) : '', t2 = toks[vi + 2] ? clean(toks[vi + 2]) : '';
+      if (/^(?:у|с|со|в|к|ко)$/i.test(t1) && t2 && !WR_OBJ.test(nrm(t2))) dat = t2;
+      else if (/(?:у|ю|е|ам|ям|ой|ей|ам)$/.test(nrm(t1)) && nrm(t1).length > 3 && !objBad && !/^(?:про|об|о|по|что|как|когда|где|чтобы|насчет)$/.test(nrm(t1))) dat = t1;
+    }
+    var ok, bare = toks.length <= vi + 1;
+    if (needRec) ok = !!(cap || rel || WR_WORD.test(n) || dat);
+    else if (isWrite) ok = !objBad || !!(cap || rel);
+    else if (isSend) ok = !!(cap || rel || WR_WORD.test(n));
+    else ok = !bare && !/(?:^|\s)себе(?![а-я])/.test(n);
+    if (ok && bare) ok = false;
+    if (ok) {
+      var who = cap || rel || dat, rest;
+      if (cap) { var ci = toks.findIndex(function (x, ix) { return ix > vi && clean(x) === cap; }), nx = toks[ci + 1]; if (nx && /^[А-ЯЁ][а-яё]+[.,;:!?]*$/.test(nx)) { who = cap + ' ' + clean(nx); rest = toks.filter(function (x, ix) { return ix !== ci && ix !== ci + 1 && !(ix === ci - 1 && ix > vi && PREP1.test(clean(x))); }).join(' '); } }
+      if (rest === undefined) { var wi = toks.findIndex(function (x, ix) { return ix > vi && clean(x) === who; }); rest = toks.filter(function (x, ix) { return ix <= vi || (clean(x) !== who && !(ix === wi - 1 && wi > vi + 1 && PREP1.test(clean(x)))); }).join(' '); }
+      return { cat: 'writes', entry: { id: uid(), who: who, text: capz(rest), when: ctx.when || '', done: false } };
     }
   }
+  if (ctx.when) return null;
   if (PP_RE.test(n)) {
     var mm, re = /(?:^|\s)(?:с|со|к|ко|у)\s+([А-ЯЁA-Zа-яёa-z][А-Яа-яЁёA-Za-z\-]+)(\s+[А-ЯЁA-Z][а-яё]+)?/g, nm2 = '';
     while ((mm = re.exec(raw))) { if (PP_STOP.test(nrm(mm[1])) || nrm(mm[1]).length < 3) continue; nm2 = mm[1] + (mm[2] && /^[А-ЯЁA-Z]/.test(mm[1]) ? mm[2] : ''); break; }
@@ -2431,7 +2455,7 @@ try { FX = (function () {
 applySkin();
 var mv0 = carryOver();
 var srt0 = [];
-if ((S.autom || 0) < 2) { S.autom = 2; if (S.set.auto !== false) { srt0 = sortExisting(); } save(); }
+if ((S.autom || 0) < 3) { S.autom = 3; if (S.set.auto !== false) { srt0 = sortExisting(); } save(); }
 renderSettings();
 renderAll();
 FX.apply();
