@@ -1267,10 +1267,9 @@ function detectCat(text, ctx) {
   if (!n) return null;
   var plan = /^(?:(?:надо|нужно|не забыть|не забудь)\s+)*(?:записаться|записать|запись|запишись|записывайся)(?![а-я])/.test(n);
   if (DOC_RE.test(n) || DOC_AN.test(n)) {
-    if (plan && ctx.when) return null;
     var nm = raw.replace(/^(?:(?:надо|нужно|не забыть|не забудь)\s+)*(?:записаться|записать себя|записать|запись)\s+(?:к|на|в)\s+/i, '').replace(/^(?:(?:надо|нужно)\s+)+/i, '');
     nm = abbr(capz(nm || raw));
-    return { cat: 'doctors', entry: { id: uid(), name: nm, status: (ctx.when && !plan) ? 'booked' : 'todo', when: (ctx.when && !plan) ? ctx.when : '', note: '', done: false } };
+    return { cat: 'doctors', entry: { id: uid(), name: nm, status: (ctx.when && !plan) ? 'booked' : 'todo', when: (ctx.when && !plan) ? ctx.when : '', note: (ctx.when && plan) ? 'Напомнить: ' + fmtDay(ctx.when.slice(0, 10)) + (ctx.when.length > 10 ? ', ' + ctx.when.slice(11, 16) : '') : '', done: false } };
   }
   if (ctx.when) return null;
   var toks = raw.split(/\s+/), isNow = WR_NOW.test(n), isMsg = WR_MSG.test(n);
@@ -2432,7 +2431,7 @@ try { FX = (function () {
 applySkin();
 var mv0 = carryOver();
 var srt0 = [];
-if (!S.autom) { S.autom = 1; if (S.set.auto !== false) { srt0 = sortExisting(); } save(); }
+if ((S.autom || 0) < 2) { S.autom = 2; if (S.set.auto !== false) { srt0 = sortExisting(); } save(); }
 renderSettings();
 renderAll();
 FX.apply();
