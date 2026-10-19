@@ -404,6 +404,8 @@ html[data-ls="neon"] .list .row { background: color-mix(in srgb, var(--surface-s
     <div role="tabpanel" id="p-reg" hidden>
       <p class="note">Дела без привязки к дню: например, «2 раза в неделю». Отмечай, когда сделала. Норма считается за неделю (с понедельника), за 2 недели или за месяц.</p>
       <ul class="list" id="l-reg"></ul>
+      <details id="d-reg-later"><summary></summary><ul class="list" id="l-reg-later"></ul></details>
+      <details id="d-reg-done"><summary></summary><ul class="list" id="l-reg-done"></ul></details>
     </div>
   </section>
 
@@ -508,6 +510,7 @@ html[data-ls="neon"] .list .row { background: color-mix(in srgb, var(--surface-s
       <label>Сложность<select id="ed-df"><option value="1">Лёгкая</option><option value="2">Средняя</option><option value="3">Сложная</option></select></label>
       <label>Сколько займёт<select id="ed-tm"><option value="1">До 15 минут</option><option value="2">До часа</option><option value="3">Час и больше</option></select></label>
       <label>Раздел<select id="ed-cat"><option value="keep">Оставить как есть</option><option value="doctors">Врачи</option><option value="writes">Написать</option><option value="people">Люди</option></select></label>
+      <div id="ed-days" hidden style="grid-column:1/-1"><span class="note">Дни недели (дело появится в списке в свой день)</span><div class="inline" style="flex-wrap:wrap;gap:10px;margin-top:6px"><label><input type="checkbox" data-wd="0"> пн</label><label><input type="checkbox" data-wd="1"> вт</label><label><input type="checkbox" data-wd="2"> ср</label><label><input type="checkbox" data-wd="3"> чт</label><label><input type="checkbox" data-wd="4"> пт</label><label><input type="checkbox" data-wd="5"> сб</label><label><input type="checkbox" data-wd="6"> вс</label><label>Время <input id="ed-rtime" type="time"></label></div></div>
       <label>Повтор<select id="ed-rep"><option value="none">Не повторять</option><optgroup label="Регулярно, в любой день"><option value="q1w">1 раз в неделю</option><option value="q2w">2 раза в неделю</option><option value="q3w">3 раза в неделю</option><option value="q4w">4 раза в неделю</option><option value="q5w">5 раз в неделю</option><option value="q1b">1 раз в 2 недели</option><option value="q1m">1 раз в месяц</option><option value="q2m">2 раза в месяц</option></optgroup><optgroup label="По расписанию, в конкретный день"><option value="daily">Каждый день</option><option value="weekdays">По будням</option><option value="weekly">Каждую неделю в тот же день</option><option value="biweekly">Раз в 2 недели в тот же день</option><option value="monthly">Каждый месяц</option><option value="yearly">Каждый год</option></optgroup></select></label>
     </div>
     <div class="inline"><button class="submit" type="submit">Сохранить</button><button class="mini" type="button" data-act="edit-close">Отмена</button></div>
@@ -689,6 +692,21 @@ function regCount(t) { var k = perKey(t.reg.per, today()); return (t.log || []).
 function regToday(t) { return (t.log || []).indexOf(today()) >= 0; }
 function regNeed(t) { return Math.max(0, t.reg.n - regCount(t)); }
 function regUrgent(t) { return regNeed(t) > 0 && !regToday(t) && perLeft(t.reg.per, today()) <= regNeed(t); }
+var WDN = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+function wdOf(day) { return (pd(day).getDay() + 6) % 7; }
+function regDays(t) { return (t.reg && t.reg.per === 'w' && t.reg.days && t.reg.days.length) ? t.reg.days : null; }
+/* показывать ли дело в списке: без дней недели пока норма не выполнена, с днями только когда подошёл очередной день, а прошлые уже закрыты */
+function regDue(t) {
+  if (regNeed(t) <= 0) return false;
+  var d = regDays(t); if (!d) return true;
+  var w = wdOf(today()), sofar = d.filter(function (x) { return x <= w; }).length;
+  return regCount(t) < sofar;
+}
+function regDayLabel(t) { var d = regDays(t); return d ? 'по ' + d.slice().sort().map(function (x) { return WDN[x]; }).join(', ') + (t.reg.time ? ' в ' + t.reg.time : '') : ''; }
+function regNextDay(t) {
+  var d = regDays(t); if (!d) return ''; var w = wdOf(today()), nx = d.slice().sort().filter(function (x) { return x > w; })[0];
+  return nx === undefined ? 'на следующей неделе' : 'в ' + ['понедельник', 'вторник', 'среду', 'четверг', 'пятницу', 'субботу', 'воскресенье'][nx];
+}
 function regCheck(t) {
   if (regToday(t)) return;
   t.log = (t.log || []).concat(today()).slice(-120);
@@ -730,8 +748,8 @@ function queue() {
       var n = dayDiff(x.due); pushed[x.id] = 1;
       push({ id: 'dl:' + x.id, kind: 'task', ref: x.id, kicker: 'Дедлайн', title: x.text, sub: n < 0 ? 'Просрочено на ' + DAYS(-n) : n === 0 ? 'Сегодня последний день' : 'Завтра последний день', btn: 'Сделано' });
     });
-  S.tasks.filter(function (x) { return !x.ex && x.reg && regUrgent(x); }).forEach(function (x) {
-    push({ id: 'reg:' + x.id, kind: 'reg', ref: x.id, kicker: 'Регулярное', title: x.text, sub: 'Норма ' + regLabel(x.reg) + ': осталось ' + regNeed(x) + ', а дней в периоде ' + perLeft(x.reg.per, today()), btn: 'Сделала' });
+  S.tasks.filter(function (x) { return !x.ex && x.reg && regDays(x) && regDue(x); }).forEach(function (x) {
+    push({ id: 'reg:' + x.id, kind: 'reg', ref: x.id, kicker: 'Регулярное', title: x.text, sub: 'По расписанию: ' + regDayLabel(x), btn: 'Сделала' });
   });
   var timed = S.tasks.filter(function (x) { return !x.ex && !x.reg && !isDone(x) && !pushed[x.id]; });
   var dueNow = function (x) {
@@ -842,7 +860,7 @@ function chip(c, t) { return '<span class="chip ' + c + '">' + esc(t) + '</span>
 function renderLists() {
   var b = {
     tasks: S.tasks.filter(function (x) { return !x.reg && !isDone(x) && (x.due ? dayDiff(x.due) <= 3 : true) && (x.due || x.when) && (x.repeat && x.repeat !== 'none' ? occursOn(x, today()) : (x.due ? true : new Date(x.when).getTime() < Date.now() + 864e5)); }).length,
-    reg: S.tasks.filter(function (x) { return x.reg && !x.ex && regUrgent(x); }).length,
+    reg: S.tasks.filter(function (x) { return x.reg && !x.ex && regDue(x); }).length,
     doctors: S.doctors.filter(function (d) { return !d.done && (d.status === 'todo' || (d.when && hoursUntil(d.when) < 72)); }).length,
     people: S.people.filter(function (p) { return pRatio(p) >= 1; }).length,
     writes: S.writes.filter(function (w) { return !w.done; }).length
@@ -874,14 +892,19 @@ function renderLists() {
   var skey = function (x) { return (x.due || (x.when || '').slice(0, 10) || '9') + (x.when || ''); };
   var tOpen = S.tasks.filter(function (x) { return !x.reg && !isDone(x); }).sort(function (a, c) { return skey(a).localeCompare(skey(c)); });
   var tDone = S.tasks.filter(function (x) { return !x.reg && isDone(x); });
-  var regs = S.tasks.filter(function (x) { return x.reg; }).sort(function (a, c) { return regNeed(c) - regNeed(a); });
-  $('#l-reg').innerHTML = regs.length ? regs.map(function (x) {
+  var regsAll = S.tasks.filter(function (x) { return x.reg; }), regRow = function (x, mode) {
     var cnt = regCount(x), dots = ''; for (var i = 0; i < Math.min(x.reg.n, 10); i++) dots += '<span class="rdot' + (i < cnt ? ' on' : '') + '"></span>';
-    var last = (x.log || []).slice(-1)[0], meta = regLabel(x.reg) + ' · сейчас ' + cnt + ' из ' + x.reg.n + (last ? ' · последний раз ' + rel(dayDiff(last)) : ' · ещё не делала');
-    var ch = regNeed(x) === 0 ? chip('ok', 'норма выполнена') : regUrgent(x) ? chip('alert', 'пора, дней в периоде ' + perLeft(x.reg.per, today())) : chip('', 'осталось ' + regNeed(x));
+    var last = (x.log || []).slice(-1)[0], dl = regDayLabel(x), meta = regLabel(x.reg) + (dl ? ' · ' + dl : '') + ' · сейчас ' + cnt + ' из ' + x.reg.n + (last ? ' · последний раз ' + rel(dayDiff(last)) : ' · ещё не делала');
+    var ch = mode === 'done' ? chip('ok', 'норма выполнена') : mode === 'later' ? chip('', 'ждёт: ' + regNextDay(x)) : (regDays(x) ? chip('warn', 'по расписанию') : chip('', 'осталось ' + regNeed(x)));
     var rate = '<span class="rate"><button type="button" class="chip pts" data-act="task-df" data-id="' + x.id + '" title="Сложность">' + DF[x.df || 2] + '</button><button type="button" class="chip pts" data-act="task-tm" data-id="' + x.id + '" title="Сколько займёт">' + TM[x.tm || 1] + '</button><span class="chip ok">+' + taskPts(x) + ' ★ за раз</span></span>';
     return '<li class="row"><div class="main"><strong>' + esc(x.text) + '</strong><span class="meta">' + esc(meta) + '</span><span class="dots" aria-hidden="true">' + dots + '</span>' + rate + '</div><div class="side">' + ch + (regToday(x) ? '<button type="button" class="mini" data-act="reg-undo" data-id="' + x.id + '">Отменить отметку</button>' : '<button type="button" class="mini pri" data-act="reg-check" data-id="' + x.id + '">Сделала сегодня</button>') + '<button type="button" class="x" data-act="task-edit" data-id="' + x.id + '" aria-label="Изменить" title="Изменить">✎</button><button type="button" class="x" data-act="task-del" data-id="' + x.id + '" aria-label="Удалить">×</button></div></li>';
-  }).join('') : '<li class="empty">Пока пусто. В поле «Повтор» выбери «2 раза в неделю» или «1 раз в месяц», и дело появится здесь.</li>';
+  };
+  var rDue = regsAll.filter(regDue), rLater = regsAll.filter(function (x) { return !regDue(x) && regNeed(x) > 0; }), rDone = regsAll.filter(function (x) { return regNeed(x) <= 0; });
+  $('#l-reg').innerHTML = rDue.length ? rDue.map(function (x) { return regRow(x, 'due'); }).join('') : (regsAll.length ? '<li class="empty">На сегодня регулярных нет. Следующие появятся, когда подойдёт их день.</li>' : '<li class="empty">Пока пусто. В поле «Повтор» выбери «2 раза в неделю» или «1 раз в месяц», и дело появится здесь.</li>');
+  $('#l-reg-later').innerHTML = rLater.map(function (x) { return regRow(x, 'later'); }).join('');
+  $('#d-reg-later').hidden = !rLater.length; $('#d-reg-later summary').textContent = 'Дальше по расписанию (' + rLater.length + ')';
+  $('#l-reg-done').innerHTML = rDone.map(function (x) { return regRow(x, 'done'); }).join('');
+  $('#d-reg-done').hidden = !rDone.length; $('#d-reg-done summary').textContent = 'Норма на этот период выполнена (' + rDone.length + ')';
   $('#l-tasks').innerHTML = tOpen.length ? tOpen.map(function (x) { return trow(x, false); }).join('') : '<li class="empty">Пусто. Закинь любую задачу в поле сверху. Время и дедлайн можно не указывать.</li>';
   $('#l-tasks-done').innerHTML = tDone.map(function (x) { return trow(x, true); }).join('');
   $('#d-tasks').hidden = !tDone.length; $('#d-tasks summary').textContent = 'Сделано (' + tDone.length + ')';
@@ -1007,15 +1030,18 @@ function next() {
   h += '<button type="button" class="mini pri" data-pa="done">' + esc(ev.label || 'Понятно') + '</button>';
   if (ev.key !== 'buddy' && !ev.quiet) h += '<button type="button" class="mini" data-pa="later">Через 10 минут</button>';
   if (ev.open) h += '<button type="button" class="mini" data-pa="open">Открыть</button>';
+  if (ev.key !== 'buddy' && !ev.quiet) h += '<button type="button" class="mini" data-pa="ack">Помню</button>';
   if (ev.key === 'buddy') h += '<button type="button" class="mini" data-pa="close">Ок</button>';
   bubble.innerHTML = h + '</div>';
   bubble.hidden = false; buddy.classList.add('talking');
   if (!ev.quiet) startAttention(ev);
 }
+function ackKey(ev) { return ev.kind + ':' + (ev.ref || ev.slot || ev.key) + ':' + today(); }
 function popupAction(a) {
   var ev = P.cur; if (!ev) return;
   if (a === 'later') { S.later[ev.key] = Date.now() + 10 * 60000; save(); }
   else if (a === 'open') { if (ev.open) { S.tab = ev.open; save(); renderAll(); var l = $('#lists'); if (l && l.scrollIntoView) l.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }
+  else if (a === 'ack') { S.ack = S.ack || {}; S.ack[ackKey(ev)] = 1; delete S.later[ev.key]; save(); }
   else if (a === 'done') { if (ev.run) ev.run(); }
   next();
 }
@@ -1072,8 +1098,8 @@ function events(off) {
   });
   /* регулярные: напомнить, если иначе не успеть */
   S.tasks.forEach(function (x) {
-    if (x.ex || !x.reg || !regUrgent(x)) return;
-    ev.push({ key: 'reg:' + x.id + ':' + t, at: atTime(t, '11:00'), kind: 'regp', kicker: 'Регулярное', title: x.text, body: 'Норма ' + regLabel(x.reg) + ': осталось ' + regNeed(x) + ', дней в периоде ' + perLeft(x.reg.per, t), label: 'Сделала', run: function () { var q = find(S.tasks, x.id); if (q) { regCheck(q); save(); renderAll(); } }, open: 'reg' });
+    if (x.ex || !x.reg || !regDays(x) || regToday(x) || regDays(x).indexOf(wdOf(t)) < 0 || !regDue(x)) return;
+    ev.push({ key: 'reg:' + x.id + ':' + t, at: atTime(t, x.reg.time || '11:00'), kind: 'regp', ref: x.id, kicker: 'Сегодня по расписанию', title: x.text, body: '', label: 'Сделала', run: function () { var q = find(S.tasks, x.id); if (q) { regCheck(q); save(); renderAll(); } }, open: 'reg' });
   });
   /* люди: максимум один человек в день и не чаще раза в 3 дня */
   var ov = S.people.filter(function (p) { return !p.ex && pRatio(p) >= 1 && (!S.nag[p.id] || -dayDiff(S.nag[p.id]) >= 3); }).sort(function (a, b) { return pRatio(b) - pRatio(a); })[0];
@@ -1084,6 +1110,7 @@ function events(off) {
   return ev;
 }
 function due(ev, now) {
+  if (S.ack && S.ack[ackKey(ev)]) return false;
   var l = S.later[ev.key];
   if (l) return l <= now;
   return !S.fired[ev.key] && ev.at <= now && now - ev.at < 6 * 36e5;
@@ -1108,6 +1135,7 @@ function check() {
   save(); chime();
   /* чистим старые отметки */
   Object.keys(S.fired).forEach(function (k) { if (S.fired[k] < now - 4 * 864e5) delete S.fired[k]; });
+  if (S.ack) Object.keys(S.ack).forEach(function (k) { if (k.slice(-10) !== today()) delete S.ack[k]; });
 }
 
 /* ---------- награда и тосты ---------- */
@@ -1253,6 +1281,17 @@ var PP_RE = /(?:^|[^а-я])(?:встретиться|встретимся|уви
 var PP_STOP = /^(?:коллегами|ними|нами|всеми|кем|кем-то|кем-нибудь|собой|тобой|вами|ним|ней|ним)$/;
 function capz(x) { x = String(x || '').trim(); return x ? x.charAt(0).toUpperCase() + x.slice(1) : x; }
 function abbr(x) { return x.replace(/(^|[^А-Яа-яЁё])(узи|мрт|экг|кт|лор|ээг)(?![А-Яа-яЁё])/gi, function (m, a, b) { return a + b.toUpperCase(); }); }
+var WD_RE = /(?:^|[^а-я0-9])((?:по|в|во|каждый|каждую)\s+)?(понедельник[а-я]*|вторник[а-я]*|сред[ауы]|средам|четверг[а-я]*|пятниц[ауы]|пятницам|суббот[ауы]|субботам|воскресень[а-я]*|пн|вт|ср|чт|пт|сб|вс)(?![а-я0-9])/g;
+function wdIndex(w) { return /^понед|^пн/.test(w) ? 0 : /^втор|^вт$/.test(w) ? 1 : /^сред|^ср$/.test(w) ? 2 : /^четв|^чт$/.test(w) ? 3 : /^пятн|^пт$/.test(w) ? 4 : /^субб|^сб$/.test(w) ? 5 : 6; }
+function parseDays(text) {
+  var n = nrm(text), days = [], cuts = [], m; WD_RE.lastIndex = 0;
+  while ((m = WD_RE.exec(n))) { var st = m.index + (m[0].length - m[0].replace(/^[^а-я0-9]/, '').length); days.push(wdIndex(m[2])); cuts.push([st, m.index + m[0].length]); }
+  if (!days.length) return null;
+  var out = text; for (var i = cuts.length - 1; i >= 0; i--) out = out.slice(0, cuts[i][0]) + ' ' + out.slice(cuts[i][1]);
+  out = out.replace(/\s+(?:и|,)\s*(?=$|[,.])/g, '').replace(/(?:^|\s)(?:и|,)\s+(?=и|,|$)/g, ' ').replace(/\s+/g, ' ').replace(/\s+([,.;])/g, '$1').replace(/^[\s,.;:-]+|[\s,.;:-]+(?:и)?$/g, '').replace(/\s+и$/i, '');
+  var u = []; days.forEach(function (d) { if (u.indexOf(d) < 0) u.push(d); });
+  return { days: u.sort(), text: out };
+}
 function detectReg(text) {
   var n = nrm(text), m, code = '', cut;
   var NUM = { 'один': 1, 'одну': 1, 'два': 2, 'две': 2, 'дважды': 2, 'три': 3, 'трижды': 3, 'четыре': 4, 'пять': 5 };
@@ -1265,10 +1304,17 @@ function detectReg(text) {
   else if ((m = /(?:^|[^а-я0-9])(дважды|трижды)\s+в\s+недел[а-я]*/.exec(n))) { code = 'q' + num(0, m[1]) + 'w'; cut = m[0].replace(/^[^а-я0-9]/, ''); }
   else if ((m = /(?:^|[^а-я0-9])(еженедельно)(?![а-я])/.exec(n))) { code = 'q1w'; cut = m[1]; }
   else if ((m = /(?:^|[^а-я0-9])(ежемесячно)(?![а-я])/.exec(n))) { code = 'q1m'; cut = m[1]; }
+  var dd = null;
+  if (!code) {
+    var m2 = /(?:^|[^а-я0-9])(?:по|каждый|каждую)\s+(?:понедельник|вторник|сред|четверг|пятниц|суббот|воскресень)/.exec(n);
+    if (m2) { dd = parseDays(text); if (dd && dd.days.length >= 1 && dd.days.length <= 5) return { code: 'q' + dd.days.length + 'w', text: dd.text ? capz(dd.text) : text, days: dd.days }; return null; }
+  }
   if (!code || !parseRep(code)) return null;
   var i = n.indexOf(cut), out = (text.slice(0, i) + ' ' + text.slice(i + cut.length)).replace(/\s+/g, ' ').replace(/\s+([,.;])/g, '$1').replace(/^[\s,.;:-]+|[\s,.;:-]+$/g, '');
   out = out.replace(/\s+(?:по|на)$/i, '');
-  return { code: code, text: out ? capz(out) : text };
+  var res = { code: code, text: out ? capz(out) : text };
+  if (/w$/.test(code)) { var d2 = parseDays(res.text); if (d2 && d2.days.length) { res.days = d2.days; res.text = d2.text ? capz(d2.text) : res.text; res.code = 'q' + Math.min(5, d2.days.length) + 'w'; } }
+  return res;
 }
 function detectCat(text, ctx) {
   ctx = ctx || {}; var raw = String(text || '').trim(), n = nrm(raw);
@@ -1334,7 +1380,7 @@ function sortExisting() {
   S.tasks.slice().forEach(function (t) {
     if (t.done || t.reg || t.due || t.ex || (t.pr || 0) > 3 || (t.repeat && t.repeat !== 'none')) return;
     var rg = !t.when && detectReg(t.text);
-    if (rg) { t.reg = parseRep(rg.code); t.log = []; t.text = rg.text; t.when = ''; moved.push({ text: t.text, to: 'reg' }); return; }
+    if (rg) { t.reg = parseRep(rg.code); if (rg.days) t.reg.days = rg.days; t.log = []; t.text = rg.text; t.when = ''; moved.push({ text: t.text, to: 'reg' }); return; }
     var r = detectCat(t.text, { when: t.when || '' });
     if (!r) return;
     var i = S.tasks.indexOf(t); if (i >= 0) S.tasks.splice(i, 1);
@@ -1352,7 +1398,8 @@ $('#qa').addEventListener('submit', function (e) {
   e.preventDefault(); var t = $('#qa-text').value.trim(); if (!t) return;
   var wh = $('#qa-when').value, rp = $('#qa-rep').value, due = $('#qa-due').value, defaulted = false, reg = parseRep(rp);
   var auto = S.set.auto !== false, manualWh = !!wh, routed = null;
-  if (!reg && auto && rp === 'none' && !due && !wh) { var rg = detectReg(t); if (rg) { reg = parseRep(rg.code); t = rg.text; routed = 'reg'; } }
+  if (!reg && auto && rp === 'none' && !due && !wh) { var rg = detectReg(t); if (rg) { reg = parseRep(rg.code); t = rg.text; routed = 'reg'; if (rg.days) reg.days = rg.days; } }
+  if (reg && reg.per === 'w' && !reg.days) { var pdy = parseDays(t); if (pdy) { reg.days = pdy.days; reg.n = Math.min(5, pdy.days.length); t = pdy.text ? capz(pdy.text) : t; } }
   if (reg) { rp = 'none'; wh = ''; }
   if (!reg && !wh && rp === 'none') { var ps = parseSpeech(t); if (ps.when || ps.repeat !== 'none') { t = ps.text || t; wh = ps.when; rp = ps.repeat; } }
   if (!reg && rp !== 'none' && !wh) { wh = today() + 'T10:00'; defaulted = true; }
@@ -1381,20 +1428,29 @@ function openEdit(id) {
   var t = find(S.tasks, id); if (!t) return; editId = id;
   $('#ed-text').value = t.text; $('#ed-when').value = t.when || ''; $('#ed-due').value = t.due || '';
   $('#ed-df').value = String(t.df || 2); $('#ed-tm').value = String(t.tm || 1); $('#ed-rep').value = repValue(t); $('#ed-cat').value = 'keep';
+  document.querySelectorAll('#ed-days [data-wd]').forEach(function (c) { c.checked = !!(t.reg && t.reg.days && t.reg.days.indexOf(+c.dataset.wd) >= 0); }); $('#ed-rtime').value = (t.reg && t.reg.time) || ''; syncDays();
   $('#edit').hidden = false; $('#ed-text').focus();
 }
+function syncDays() { var m = /^q\d+w$/.test($('#ed-rep').value); $('#ed-days').hidden = !m; }
 function closeEdit() { $('#edit').hidden = true; editId = ''; }
 $('#f-edit').addEventListener('submit', function (e) {
   e.preventDefault(); var t = find(S.tasks, editId), tx = $('#ed-text').value.trim(); if (!t || !tx) return;
   var wh = $('#ed-when').value, rp = $('#ed-rep').value, reg = parseRep(rp);
   t.text = tx; t.df = +$('#ed-df').value || 2; t.tm = +$('#ed-tm').value || 1;
-  if (reg) { t.reg = reg; t.log = t.log || []; t.repeat = 'none'; t.when = ''; t.due = ''; }
+  if (reg) {
+    var oldReg = t.reg; t.reg = reg; t.log = t.log || []; t.repeat = 'none'; t.when = ''; t.due = '';
+    if (reg.per === 'w') {
+      var dsel = []; document.querySelectorAll('#ed-days [data-wd]').forEach(function (c) { if (c.checked) dsel.push(+c.dataset.wd); });
+      if (dsel.length) { t.reg.days = dsel; t.reg.n = Math.min(5, dsel.length); t.reg.time = $('#ed-rtime').value || ''; }
+    }
+  }
   else { delete t.reg; t.repeat = rp; t.due = $('#ed-due').value || ''; if (rp !== 'none' && !wh) wh = today() + 'T10:00'; if (wh !== (t.when || '')) { delete t.orig; t.cd = 0; } t.when = wh; }
   var cat = $('#ed-cat').value;
   closeEdit();
   if (cat && cat !== 'keep') { moveTask(t, cat); say('', 'Переехало в «' + CAT_NAME[cat] + '».'); } else say('', 'Поправил. Лу всё обновил.');
   save(); renderAll(); check();
 });
+document.addEventListener('change', function (e) { if (e.target && e.target.id === 'ed-rep') syncDays(); });
 $('#edit').addEventListener('click', function (e) { if (e.target === $('#edit')) closeEdit(); });
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('#edit').hidden) closeEdit(); });
 $('#f-doc').addEventListener('submit', function (e) {
